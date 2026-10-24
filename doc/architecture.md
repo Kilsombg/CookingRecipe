@@ -44,6 +44,8 @@ CookingRecipe/
 ├── app.py                 # creates the Flask app, registers routes, runs the server
 ├── db.py                  # connection setup, migration runner, query functions
 ├── config.py              # paths (DB file, images, backups, migrations), upload limits
+├── i18n.py                # UI language: current language, t() lookup, language switch route
+├── translations.py        # UI texts: {"en": {...}, "bg": {...}}
 ├── migrations/            # numbered SQL files, applied in order on startup
 │   └── 0001_initial.sql
 ├── routes/
@@ -112,6 +114,7 @@ CookingRecipe/
 | POST | `/menus/<id>/shopping/regenerate` | Rebuild the list from the current menu |
 | POST | `/shopping/items` | Add an item by hand |
 | POST | `/shopping/items/<id>/toggle` | Tick or untick an item (called from JS) |
+| POST | `/language` | Switch the UI language (`en` / `bg`), then go back to the same page |
 
 HTML forms can only send GET and POST, so updates and deletes use POST with `/delete` or a plain POST to the resource URL.
 
@@ -126,6 +129,34 @@ HTML forms can only send GET and POST, so updates and deletes use POST with `/de
 | Names | `services/text.py: name_key(s)` = `" ".join(s.split()).casefold()`, used for ingredient uniqueness and tags |
 | URLs | Pages use numeric ids, never names, so Cyrillic never appears in URLs |
 | Photos | Saved under random UUID file names, so a Bulgarian original file name doesn't matter |
+
+## Interface language (English / Bulgarian)
+
+Only the app's own UI texts are translated. Everything the user enters (recipes, ingredients, tags, menu names, units, shopping items) is shown exactly as stored, in both languages. The name "CookingRecipe" is never translated.
+
+A small home-made solution, with no extra dependency (Flask-Babel and `.po` files would be overkill for two languages and one user):
+
+- **`translations.py`** holds one dictionary per language with the same keys:
+  ```python
+  TEXTS = {
+      "en": {"nav.recipes": "Recipes", "nav.ingredients": "Ingredients", "nav.menus": "Menus",
+             "btn.save": "Save", "day.0": "Monday", "meal.breakfast": "Breakfast", ...},
+      "bg": {"nav.recipes": "Рецепти", "nav.ingredients": "Съставки", "nav.menus": "Менюта",
+             "btn.save": "Запази", "day.0": "Понеделник", "meal.breakfast": "Закуска", ...},
+  }
+  ```
+  Keys are grouped by prefix: `nav.`, `btn.`, `label.`, `msg.`, `day.`, `meal.`, and one prefix per page (`recipes.`, `menus.`…).
+- **`i18n.py`**:
+  - `get_lang()` reads the `lang` cookie; anything other than `en`/`bg` falls back to `en` (the default).
+  - `t(key, **params)` returns the text for the current language, filling in `{placeholders}` (e.g. `t("msg.deleted", name=recipe.title)`). A key missing in Bulgarian falls back to English, and a key missing everywhere shows the key itself, so a gap is visible but never crashes the page.
+  - `t` and the current `lang` are registered as Jinja globals, so templates use `{{ t("nav.recipes") }}`.
+  - `POST /language` sets the `lang` cookie (valid 1 year) and redirects back to the page it came from.
+- **Templates**: `base.html` sets `<html lang="{{ lang }}">` and shows the `EN | БГ` switch in the navigation. No UI text is written directly in a template; it always goes through `t()`.
+- **Python code**: flash messages and validation errors use `t()` too.
+- **JavaScript**: confirmation texts are passed from the template in `data-` attributes (`data-confirm="{{ t('recipes.confirm_delete') }}"`), so `app.js` has no texts of its own.
+- **Stored values stay language-neutral**: meals are stored as `breakfast`/`lunch`/… and days as `0`–`6`, and are shown through `t("meal." + meal)` and `t("day." + day)`. Changing the language never touches the database.
+
+A test checks that `en` and `bg` in `translations.py` have exactly the same keys.
 
 ## Photo handling
 
@@ -159,5 +190,6 @@ python app.py
   - `macros.py`: converting to grams for every kind of unit, `бр.` with and without grams per piece, missing macros, NULL quantities, per-serving division
   - `shopping_list.py`: merging, scaling, NULL quantities
   - `text.py`: Cyrillic case folding (`"  Пилешко   ФИЛЕ " → "пилешко филе"`)
+- `translations.py`: English and Bulgarian have the same set of keys. `i18n.py`: fallback to English, unknown cookie value, placeholders.
 - `db.py` tests use a temporary SQLite file. They check that all migrations apply cleanly to an empty database, and that Bulgarian text is saved and loaded correctly.
 - Pages are checked by hand in the browser. There are no UI tests; it's a personal tool.

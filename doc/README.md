@@ -28,6 +28,7 @@ It replaces keeping recipes in Notepad.
 | UI | Jinja2 templates + Pico.css + a little vanilla JS | Looks clean with very little CSS work |
 | Photos | Files in `images/`; the database stores only the file name | Keeps the database small; photos are easy to browse |
 | Language | Recipe content in Bulgarian (Cyrillic), stored as UTF-8 | Search and sorting handle Cyrillic upper/lower case correctly |
+| Interface language | English and Bulgarian, switchable in the navigation bar | Only UI texts are translated; recipes, ingredients and other content stay exactly as entered, and "CookingRecipe" keeps its name |
 | Macros | Entered per 100 g on each ingredient; recipe and menu totals are calculated | Enter an ingredient's macros once and every recipe that uses it gets them |
 | Database changes | Numbered SQL files in `migrations/`, applied automatically on startup | Every change is tracked, and the DB is backed up before each one |
 | Optional data | Photo, source link and every macro value can be empty (NULL) | You often won't have all of them |

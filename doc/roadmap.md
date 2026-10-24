@@ -16,7 +16,15 @@ Each milestone ends with something you can actually use. Work through them in or
 - [ ] `services/text.py` + tests
 - [ ] Tests: migrations apply to an empty database; Bulgarian text is saved and loaded correctly
 
-## M2 — Ingredients and recipes (core)
+## M2 — Interface language (English / Bulgarian)
+- [ ] `translations.py` with `en` and `bg` texts for everything that exists so far (navigation, home page)
+- [ ] `i18n.py`: `get_lang()` from the `lang` cookie (default `en`), `t()` with fallback to English, Jinja globals
+- [ ] `POST /language` + `EN | БГ` switch in the navigation; `<html lang>` follows the chosen language
+- [ ] Test: `en` and `bg` have the same keys
+
+**From here on:** every new page, button, message and label is added to `translations.py` in both languages, never written directly in a template. Recipe content is never translated.
+
+## M3 — Ingredients and recipes (core)
 - [ ] Ingredient catalogue: list, add, edit, delete (blocked when the ingredient is used)
 - [ ] Create / edit / delete a recipe, with ingredient rows you can add or remove (`<datalist>` autocomplete, unknown names added to the catalogue automatically)
 - [ ] Recipe detail page
@@ -24,32 +32,32 @@ Each milestone ends with something you can actually use. Work through them in or
 
 **Done when:** you can type in your Notepad recipes, in Bulgarian, and stop using Notepad.
 
-## M3 — Macros
+## M4 — Macros
 - [ ] `services/macros.py` with tests (grams conversion, missing data, per serving)
 - [ ] Macros per 100 g and grams per piece on the ingredient form
 - [ ] Total and per-serving macros on the recipe page, with a list of incomplete ingredients
 - [ ] Calories per serving on the recipe cards
 - [ ] "Missing macros" filter on the ingredients page
 
-## M4 — Photos, links, tags, search
+## M5 — Photos, links, tags, search
 - [ ] Photo upload with Pillow resize, plus a placeholder when there is no photo
 - [ ] Source link shown as a clickable link when present
 - [ ] Tags: add on the form, filter on the list
 - [ ] Search by title or ingredient, ignoring Cyrillic upper/lower case
 
-## M5 — Menus
+## M6 — Menus
 - [ ] Create, rename and delete menus
 - [ ] Add a recipe to a menu with day, meal and servings
 - [ ] Menu page grouped by day and meal
 - [ ] Macro totals per day and for the whole menu
 
-## M6 — Shopping list
+## M7 — Shopping list
 - [ ] `services/shopping_list.py` with tests (merging by ingredient + unit, scaling, NULL quantities)
 - [ ] Build the list from a menu and save it in `shopping_items`
 - [ ] Tick items off (JS + POST), add items by hand, regenerate
 - [ ] Print styles
 
-## M7 — Units page
+## M8 — Units page
 - [ ] View, rename and add units
 
 ## Later (pick any)

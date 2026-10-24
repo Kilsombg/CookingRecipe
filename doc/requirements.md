@@ -6,6 +6,7 @@
 - Runs locally only. No authentication, no deployment, no multi-user handling.
 - Small and simple. Each feature should be usable on its own.
 - **Recipe content is written in Bulgarian (Cyrillic)**: titles, ingredient names, instructions, notes, tags, menu names and unit labels. Latin text works too, and both can be mixed.
+- **The interface is available in English and Bulgarian** (see section 7). Only the app's own texts are translated; your recipe content is always shown exactly as you typed it.
 
 Priority: **Must** = first version, **Should** = soon after, **Could** = nice to have.
 
@@ -108,7 +109,28 @@ Macros are **calculated** from the ingredients. You never type them on a recipe.
 - A unit is either a fixed number of grams, or a "piece" unit with no grams.
 - A unit can't be deleted while recipes use it.
 
-## 7. Could have (later)
+## 7. Interface language (English / Bulgarian) — Must
+
+The app's interface can be switched between **English** and **Bulgarian**.
+
+- A language switch (`EN | БГ`) in the navigation bar, visible on every page.
+- The choice is remembered (in a browser cookie), so it survives closing the browser and restarting the app.
+- Default language: **English**.
+
+| Translated (UI texts) | Not translated (your content) |
+|-----------------------|-------------------------------|
+| Navigation (Recipes · Ingredients · Menus · Units) | The app name **"CookingRecipe"**, which stays the same in both languages |
+| Page titles and headings | Recipe titles, instructions, notes |
+| Buttons and links ("Save", "Delete", "Edit"…) | Ingredient names |
+| Form labels, placeholders and help text | Tags |
+| Messages and errors ("Recipe saved", "Name is required"…) | Menu names |
+| Confirmation dialogs ("Delete this recipe?") | Unit labels (`г`, `бр.`, `чаша`…), which are data you can rename on the Units page |
+| Days of the week and meal names (breakfast / lunch…) | Shopping-list items added by hand |
+| Macro labels (Calories, Protein, Carbs, Fat) and "—" hints | |
+
+Switching the language never changes anything in the database.
+
+## 8. Could have (later)
 
 - Mark recipes as favourites, and sort by favourites or last cooked.
 - Copy an existing menu ("repeat last week").
