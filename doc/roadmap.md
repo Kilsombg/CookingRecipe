@@ -58,12 +58,15 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] Print styles
 
 ## M8 — Units page
-- [ ] View, rename and add units
+- [x] View, rename and add units (and delete one no recipe uses)
+
+## M9 — Favourites, menu copy, export/import
+- [x] `0002_add_favourite.sql`: mark a recipe as a favourite on its page, ★ on the cards, "Favourites" filter
+- [x] Copy a menu ("repeat last week"), without its shopping list
+- [x] Export everything except photos and shopping lists as one JSON file; import adds what isn't here yet (by name), after a backup
 
 ## Later (pick any)
-- Favourites / "last cooked"
-- Copy a menu
-- JSON export/import
+- "Last cooked" date, and sorting by it
 - Density per ingredient for more accurate volume units
 - Merge different weight units in the shopping list
 - Access from a phone on the home Wi-Fi (run on `0.0.0.0` and allow it through Windows Firewall)

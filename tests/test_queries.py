@@ -1,9 +1,12 @@
+import json
 import sqlite3
+from datetime import datetime
 
 import pytest
 
 import config
 import db
+from services.backup import build_export, parse_import
 
 
 @pytest.fixture
@@ -258,3 +261,124 @@ def test_only_manual_shopping_items_can_be_deleted(conn):
 
     db.delete_menu(conn, menu_id)
     assert conn.execute("SELECT COUNT(*) FROM shopping_items").fetchone()[0] == 0
+
+
+def test_units_add_rename_and_usage(conn):
+    cup = db.create_unit(conn, {"name": "Чаша", "grams": 240})
+    assert db.find_unit(conn, "чаша")["id"] == cup   # ignoring case
+    assert db.find_unit(conn, "чаени чаши") is None
+    db.create_recipe(conn, recipe(), [line("Брашно", 2, cup), line("Захар", 1, cup)])
+
+    db.update_unit(conn, cup, {"name": "ч. чаша", "grams": 250})
+    assert dict(db.get_unit(conn, cup)) == {"id": cup, "name": "ч. чаша", "grams": 250}
+    usage = {u["name"]: u["recipe_count"] for u in db.list_units_with_usage(conn)}
+    assert usage["ч. чаша"] == 1 and usage["г"] == 0
+    assert len(usage) == len(db.list_units(conn)) == 9
+
+
+def test_unit_in_use_cannot_be_deleted(conn):
+    cup = db.create_unit(conn, {"name": "чаша", "grams": 240})
+    spare = db.create_unit(conn, {"name": "глава", "grams": None})
+    db.create_recipe(conn, recipe(), [line("Брашно", 2, cup)])
+    with pytest.raises(sqlite3.IntegrityError):
+        db.delete_unit(conn, cup)
+    db.delete_unit(conn, spare)
+    assert db.get_unit(conn, spare) is None and db.get_unit(conn, cup) is not None
+
+
+def test_favourites(conn):
+    lunch = db.create_recipe(conn, recipe(), [line("Ориз")])
+    db.create_recipe(conn, recipe(title="Омлет"), [line("Яйца")])
+    assert not db.has_favourites(conn)
+    before = db.get_recipe(conn, lunch)["updated_at"]
+
+    db.set_favourite(conn, lunch, True)
+    assert db.has_favourites(conn)
+    assert titles(db.list_recipes(conn, favourites=True)) == ["Пиле с ориз"]
+    assert titles(db.list_recipes(conn, "омлет", favourites=True)) == []
+    assert db.get_recipe(conn, lunch)["updated_at"] == before
+
+    # Editing the recipe keeps the mark
+    db.update_recipe(conn, lunch, recipe(title="Пиле с ориз и грах"), [line("Ориз")])
+    assert db.get_recipe(conn, lunch)["is_favourite"] == 1
+    db.set_favourite(conn, lunch, False)
+    assert db.list_recipes(conn, favourites=True) == []
+
+
+def test_copy_menu(conn):
+    recipe_id = db.create_recipe(conn, recipe(), [line("Ориз")])
+    menu_id = db.create_menu(conn, "Седмица")
+    db.add_menu_item(conn, menu_id, {"recipe_id": recipe_id, "day": 0, "meal": "lunch", "servings": 2})
+    db.add_menu_item(conn, menu_id, {"recipe_id": recipe_id, "day": None, "meal": None, "servings": 1.5})
+    db.add_shopping_item(conn, menu_id, {"name": "Мляко", "quantity": None, "unit": None})
+
+    copy_id = db.copy_menu(conn, menu_id, "Седмица (копие)")
+    assert db.get_menu(conn, copy_id)["name"] == "Седмица (копие)"
+    entries = lambda m: [(i["recipe_id"], i["day"], i["meal"], i["servings"]) for i in db.get_menu_items(conn, m)]
+    assert entries(copy_id) == entries(menu_id)
+    assert db.get_shopping_items(conn, copy_id) == []
+
+    # The copy is independent of the original
+    db.delete_menu(conn, menu_id)
+    assert len(entries(copy_id)) == 2
+
+
+def fill(conn):
+    """Some of everything, for the export / import tests."""
+    cup = db.create_unit(conn, {"name": "чаша", "grams": 240})
+    db.create_ingredient(conn, "Яйца", {"calories_100g": 143, "grams_per_piece": 55})
+    omelette = db.create_recipe(conn, recipe(title="Омлет", servings=1, tags=["закуска"],
+                                             source_url="https://youtube.com/x"),
+                                [line("Яйца", 3, unit_id(conn, "бр.")), line("Мляко", 0.5, cup), line("Сол")])
+    db.set_favourite(conn, omelette, True)
+    lunch = db.create_recipe(conn, recipe(), [line("Ориз", 200, unit_id(conn, "г"), "измит")])
+    menu_id = db.create_menu(conn, "Седмица")
+    db.add_menu_item(conn, menu_id, {"recipe_id": omelette, "day": 0, "meal": "breakfast", "servings": 2})
+    db.add_menu_item(conn, menu_id, {"recipe_id": lunch, "day": None, "meal": None, "servings": 1.5})
+
+
+def without_ids(data):
+    """The export, with recipe ids replaced by their position, so two databases can be compared."""
+    position = {r["id"]: i for i, r in enumerate(data["recipes"])}
+    return {**data,
+            "recipes": [{**r, "id": position[r["id"]]} for r in data["recipes"]],
+            "menus": [{**m, "items": [{**item, "recipe": position[item["recipe"]]} for item in m["items"]]}
+                      for m in data["menus"]]}
+
+
+def test_export_and_import_into_an_empty_database(conn, tmp_path):
+    fill(conn)
+    data = db.export_data(conn)
+    assert data["recipes"][0]["is_favourite"] is True
+    assert data["recipes"][0]["ingredients"][1] == {"name": "Мляко", "quantity": 0.5, "unit": "чаша", "note": None}
+    raw = json.dumps(build_export(data, datetime.now()), ensure_ascii=False).encode("utf-8")
+
+    db.init_db(tmp_path / "other.db", config.MIGRATIONS_DIR, tmp_path / "backups", tmp_path / "images")
+    other = db.connect(tmp_path / "other.db")
+    added = db.import_data(other, parse_import(raw))
+    assert added == {"units": 1, "ingredients": 4, "recipes": 2, "menus": 1}  # the 8 starting units are there
+    assert without_ids(db.export_data(other)) == without_ids(data)
+    other.close()
+
+
+def test_import_keeps_what_is_already_there(conn):
+    fill(conn)
+    raw = json.dumps({"format": "CookingRecipe", "version": 1, **db.export_data(conn)}).encode("utf-8")
+    before = db.export_data(conn)
+    db.update_unit(conn, db.find_unit(conn, "чаша")["id"], {"name": "Чаша", "grams": 250})
+    db.update_ingredient(conn, db.find_ingredient(conn, "Яйца")["id"], "ЯЙЦА", {"calories_100g": 150})
+
+    # Importing the same file again adds nothing, and changes nothing that was edited since
+    assert db.import_data(conn, parse_import(raw)) == {"units": 0, "ingredients": 0, "recipes": 0, "menus": 0}
+    assert db.find_unit(conn, "чаша")["grams"] == 250
+    assert db.find_ingredient(conn, "яйца")["calories_100g"] == 150
+    assert len(db.export_data(conn)["recipes"]) == len(before["recipes"])
+
+    # A new menu in the file that uses an existing recipe points at the one already here
+    data = json.loads(raw)
+    data["menus"] = [{"name": "Рожден ден", "items": [{"recipe": data["recipes"][0]["id"], "servings": 6}]}]
+    data["recipes"].append({**data["recipes"][1], "id": 99, "title": "Баница"})
+    assert db.import_data(conn, parse_import(json.dumps(data).encode("utf-8"))) == {
+        "units": 0, "ingredients": 0, "recipes": 1, "menus": 1}
+    party = next(m for m in db.list_menus(conn) if m["name"] == "Рожден ден")
+    assert [i["title"] for i in db.get_menu_items(conn, party["id"])] == ["Омлет"]

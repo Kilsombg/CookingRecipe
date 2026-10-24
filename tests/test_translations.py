@@ -4,9 +4,9 @@ import config
 from services.macros import MACROS
 from translations import TEXTS
 
-# t("key") in templates and Python code, and error keys returned by services/forms.py and photos.py
+# t("key") in templates and Python code, and error keys returned by services/forms.py, photos.py and backup.py
 T_CALL = re.compile(r"""\bt\(\s*["']([\w.]+)["']\s*[,)]""")
-FORM_ERROR_KEY = re.compile(r"""["']((?:error|recipes|ingredients)\.\w+)["']""")
+FORM_ERROR_KEY = re.compile(r"""["']((?:error|recipes|ingredients|data)\.\w+)["']""")
 
 
 def test_en_and_bg_have_the_same_keys():
@@ -25,7 +25,7 @@ def test_every_used_key_exists():
     used = set()
     for path in [*base.glob("templates/**/*.html"), base / "app.py", *base.glob("routes/*.py")]:
         used |= set(T_CALL.findall(path.read_text(encoding="utf-8")))
-    for name in ("forms.py", "photos.py"):
+    for name in ("forms.py", "photos.py", "backup.py"):
         used |= set(FORM_ERROR_KEY.findall((base / "services" / name).read_text(encoding="utf-8")))
 
     assert used, "the patterns found nothing"

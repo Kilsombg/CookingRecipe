@@ -2,7 +2,7 @@ import pytest
 
 from services.forms import (clean_name, format_number, parse_ingredient, parse_menu_item, parse_menu_name,
                             parse_number, parse_recipe, parse_shopping_item, parse_source_url, parse_tags,
-                            url_host)
+                            parse_unit, url_host)
 
 UNIT_IDS = {1, 8}  # г, бр.
 
@@ -227,4 +227,22 @@ def test_shopping_item_quantity_and_unit_are_optional():
 ])
 def test_bad_shopping_item_fields(field, value, error):
     _, errors = parse_shopping_item({"name": "Мляко", "quantity": "", "unit": ""} | {field: value})
+    assert errors == {field: error}
+
+
+def test_parse_unit():
+    assert parse_unit({"name": "  чаша ", "grams": "240"}) == ({"name": "чаша", "grams": 240}, {})
+    assert parse_unit({"name": "Ч.л.", "grams": "4,5"}) == ({"name": "Ч.л.", "grams": 4.5}, {})
+    # Empty grams: a piece unit
+    assert parse_unit({"name": "глава", "grams": ""}) == ({"name": "глава", "grams": None}, {})
+
+
+@pytest.mark.parametrize("field, value, error", [
+    ("name", "", "error.required"),
+    ("grams", "0", "error.positive_number"),
+    ("grams", "-5", "error.positive_number"),
+    ("grams", "много", "error.number"),
+])
+def test_bad_unit_fields(field, value, error):
+    _, errors = parse_unit({"name": "чаша", "grams": "240"} | {field: value})
     assert errors == {field: error}

@@ -1,6 +1,7 @@
 import io
 
 import pytest
+from markupsafe import escape
 from PIL import Image
 
 import config
@@ -33,7 +34,8 @@ def recipe_form(**overrides):
 
 
 @pytest.mark.parametrize("lang", ["en", "bg"])
-@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/ingredients", "/ingredients/new", "/menus"])
+@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/ingredients", "/ingredients/new", "/menus", "/units",
+                                 "/data"])
 def test_pages_render(client, url, lang):
     client.set_cookie("lang", lang)
     assert client.get(url).status_code == 200
@@ -456,3 +458,126 @@ def test_shopping_list_of_an_empty_menu(client):
     menu_id = create_menu(client)
     page = client.get(f"/menus/{menu_id}/shopping").get_data(as_text=True)
     assert "Nothing to buy yet." in page
+
+
+def test_add_rename_and_delete_unit(app, client):
+    client.set_cookie("lang", "bg")
+    response = client.post("/units", data={"name": "чаша", "grams": "240"})
+    assert response.headers["Location"] == "/units"
+    page = client.get("/units").get_data(as_text=True)
+    assert "Мерната единица „чаша“ е добавена." in page
+    cup = query(app, db.find_unit, "чаша")["id"]
+
+    # The new name shows on recipes that use it, and its grams count for the macros
+    client.post("/ingredients", data=ingredient_form(name="Ориз"))
+    client.post("/recipes", data=recipe_form(ing_name=["Ориз"], ing_quantity=["1"], ing_unit=[str(cup)], ing_note=[""]))
+    client.post(f"/units/{cup}", data={"name": "Чаша", "grams": "0,5"})
+    assert dict(query(app, db.get_unit, cup)) == {"id": cup, "name": "Чаша", "grams": 0.5}
+    assert "1 Чаша" in client.get("/recipes/1").get_data(as_text=True)
+
+    client.post(f"/units/{cup}/delete")
+    assert query(app, db.get_unit, cup) is not None
+    assert "не може да се изтрие" in client.get("/units").get_data(as_text=True)
+
+    spare = query(app, db.create_unit, {"name": "глава", "grams": None})
+    client.post(f"/units/{spare}/delete")
+    assert query(app, db.get_unit, spare) is None
+    assert client.post("/units/999", data={"name": "x", "grams": ""}).status_code == 404
+
+
+def test_invalid_unit_keeps_what_was_typed(app, client):
+    response = client.post("/units", data={"name": "Г", "grams": "0"})
+    assert response.status_code == 400
+    page = response.get_data(as_text=True)
+    assert "A unit with this name already exists." in page
+    assert "Enter a number greater than 0." in page
+    assert 'value="Г"' in page
+
+    # Editing a row: only that row shows the typed values; keeping its own name is fine
+    grams_id = query(app, db.find_unit, "г")["id"]
+    response = client.post(f"/units/{grams_id}", data={"name": "кг", "grams": "1"})
+    assert response.status_code == 400
+    assert response.get_data(as_text=True).count('value="кг"') == 2   # the edited row and the real кг
+    assert client.post(f"/units/{grams_id}", data={"name": "г", "grams": "1"}).status_code == 302
+
+
+def test_favourite_toggle_card_star_and_filter(app, client):
+    client.post("/recipes", data=recipe_form())
+    client.post("/recipes", data=recipe_form(title="Омлет"))
+    lunch = query(app, db.list_recipes, "Пиле с ориз")[0]["id"]
+    assert "★ Favourites" not in client.get("/recipes").get_data(as_text=True)  # offered once there is one
+    assert "Add to favourites" in client.get(f"/recipes/{lunch}").get_data(as_text=True)
+
+    response = client.post(f"/recipes/{lunch}/favourite", data={"favourite": "1"})
+    assert response.headers["Location"] == f"/recipes/{lunch}"
+    assert 'aria-pressed="true"' in client.get(f"/recipes/{lunch}").get_data(as_text=True)
+    page = client.get("/recipes").get_data(as_text=True)
+    assert "★ Favourites" in page and page.count('class="favourite-star"') == 1
+
+    page = client.get("/recipes?fav=1").get_data(as_text=True)
+    assert "Пиле с ориз" in page and "Омлет" not in page
+    assert 'name="fav" value="1"' in page   # a search keeps the filter
+
+    client.post(f"/recipes/{lunch}/favourite", data={"favourite": "0"})
+    assert "No recipes match." in client.get("/recipes?fav=1").get_data(as_text=True)
+    assert client.post("/recipes/999/favourite", data={"favourite": "1"}).status_code == 404
+
+
+def test_copy_menu(app, client):
+    client.set_cookie("lang", "bg")
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client)
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "4", "meal": "dinner", "servings": "3"})
+
+    response = client.post(f"/menus/{menu_id}/copy")
+    copy_id = int(response.headers["Location"].rsplit("/", 1)[1])
+    assert copy_id != menu_id
+    page = client.get(f"/menus/{copy_id}").get_data(as_text=True)
+    assert "Менюто е копирано като „Седмица 12 ноември (копие)“." in page
+    assert "Петък" in page and "порции: 3" in page
+    assert client.post("/menus/999/copy").status_code == 404
+
+
+def test_export_then_import_into_a_new_app(app, client, tmp_path):
+    client.post("/recipes", data=recipe_form(tags="обяд"))
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    client.post(f"/recipes/{recipe_id}/favourite", data={"favourite": "1"})
+    menu_id = create_menu(client)
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "0", "meal": "", "servings": ""})
+
+    response = client.get("/data/export")
+    assert response.mimetype == "application/json"
+    assert response.headers["Content-Disposition"].startswith("attachment; filename=cookingrecipe-")
+    exported = response.get_data()
+    assert "Пиле с ориз".encode("utf-8") in exported  # readable, not \u escapes
+
+    other = create_app({"TESTING": True, "DB_PATH": tmp_path / "other.db", "MIGRATIONS_DIR": config.MIGRATIONS_DIR,
+                        "BACKUPS_DIR": tmp_path / "other-backups", "IMAGES_DIR": tmp_path / "other-images"})
+    other_client = other.test_client()
+    response = other_client.post("/data/import", data={"file": (io.BytesIO(exported), "export.json")})
+    assert response.headers["Location"] == "/data"
+    page = other_client.get("/data").get_data(as_text=True)
+    assert "Added recipes: 1, ingredients: 2, units: 0, menus: 1." in page
+    assert len(list((tmp_path / "other-backups").iterdir())) == 1
+
+    imported = query(other, db.list_recipes, "", None, True)
+    assert [r["title"] for r in imported] == ["Пиле с ориз"]
+    assert [t["name"] for t in query(other, db.get_recipe_tags, imported[0]["id"])] == ["обяд"]
+    assert [m["item_count"] for m in query(other, db.list_menus)] == [1]
+
+
+@pytest.mark.parametrize("content, message", [
+    (None, "Choose a file to import."),
+    (b"hello", "This isn't a JSON file."),
+    (b'{"recipes": []}', "This file wasn't exported from CookingRecipe."),
+    (b'{"format": "CookingRecipe", "version": 1, "recipes": [{"id": 1}]}',
+     "The file has a wrong or missing value at recipes[0].title. Nothing was imported."),
+])
+def test_bad_import_files(app, client, content, message):
+    data = {} if content is None else {"file": (io.BytesIO(content), "export.json")}
+    response = client.post("/data/import", data=data)
+    assert response.status_code == 400
+    assert str(escape(message)) in response.get_data(as_text=True)
+    assert query(app, db.list_recipes) == []
+    assert list(app.config["BACKUPS_DIR"].iterdir()) == []

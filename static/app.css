@@ -174,6 +174,17 @@ td.num {
   margin-bottom: 0.5rem;
 }
 
+/* Favourites: a star before the title on the cards, and the toggle next to the title on the recipe page */
+.favourite-star {
+  color: var(--pico-primary);
+}
+
+.favourite-form,
+.favourite-form button {
+  width: auto;
+  margin: 0;
+}
+
 .recipe-meta {
   display: flex;
   flex-wrap: wrap;
@@ -357,5 +368,44 @@ td.num {
   .shopping-list small,
   .shopping-list input:checked + span {
     color: #000;
+  }
+}
+
+/* Units page: one form per unit — name, grams, how many recipes use it, save, delete */
+.unit-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.unit-row > input,
+.unit-row > button {
+  margin: 0;
+}
+
+.unit-row > button {
+  width: auto;
+}
+
+.unit-head,
+.unit-usage {
+  color: var(--pico-muted-color);
+  font-size: 0.875em;
+}
+
+.unit-row .row-error {
+  grid-column: 1 / -1;
+  color: var(--pico-del-color);
+}
+
+@media (max-width: 576px) {
+  .unit-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .unit-head {
+    display: none;
   }
 }

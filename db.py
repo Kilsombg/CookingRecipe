@@ -116,6 +116,42 @@ def list_units(conn):
     return conn.execute("SELECT id, name, grams FROM units ORDER BY id").fetchall()
 
 
+def list_units_with_usage(conn):
+    """Every unit, with how many recipes use it (for the units page)."""
+    return conn.execute(
+        """SELECT u.id, u.name, u.grams, COUNT(DISTINCT ri.recipe_id) AS recipe_count
+           FROM units u LEFT JOIN recipe_ingredients ri ON ri.unit_id = u.id
+           GROUP BY u.id ORDER BY u.id""").fetchall()
+
+
+def get_unit(conn, unit_id):
+    return conn.execute("SELECT id, name, grams FROM units WHERE id = ?", (unit_id,)).fetchone()
+
+
+def find_unit(conn, name):
+    """The unit with this name, ignoring case ("Чаша" = "чаша"), or None."""
+    return conn.execute("SELECT id, name, grams FROM units WHERE casefold(name) = casefold(?)",
+                        (name,)).fetchone()
+
+
+def create_unit(conn, unit):
+    """`unit`: name and grams (None = a piece unit)."""
+    with conn:
+        return conn.execute("INSERT INTO units (name, grams) VALUES (:name, :grams)", unit).lastrowid
+
+
+def update_unit(conn, unit_id, unit):
+    """Recipes that use the unit show the new name, and their macros use the new grams."""
+    with conn:
+        conn.execute("UPDATE units SET name = :name, grams = :grams WHERE id = :id", {**unit, "id": unit_id})
+
+
+def delete_unit(conn, unit_id):
+    """Raises sqlite3.IntegrityError if a recipe still uses it."""
+    with conn:
+        conn.execute("DELETE FROM units WHERE id = ?", (unit_id,))
+
+
 # --- Ingredients ---
 
 # An ingredient whose data can't give macros: a macro is empty, or a recipe measures it
@@ -206,10 +242,10 @@ def recipes_using_ingredient(conn, ingredient_id):
 
 # --- Recipes ---
 
-def list_recipes(conn, q="", tag_id=None):
+def list_recipes(conn, q="", tag_id=None, favourites=False):
     """All recipes, or those whose title or an ingredient name contains `q` (ignoring case),
-    and/or that have the tag `tag_id`."""
-    sql = """SELECT r.id, r.title, r.photo_filename, r.servings, r.prep_minutes, r.cook_minutes
+    and/or that have the tag `tag_id`, and/or that are favourites."""
+    sql = """SELECT r.id, r.title, r.photo_filename, r.servings, r.prep_minutes, r.cook_minutes, r.is_favourite
              FROM recipes r"""
     conditions, params = [], {}
     if q:
@@ -220,6 +256,8 @@ def list_recipes(conn, q="", tag_id=None):
     if tag_id is not None:
         conditions.append("EXISTS (SELECT 1 FROM recipe_tags trt WHERE trt.recipe_id = r.id AND trt.tag_id = :tag)")
         params["tag"] = tag_id
+    if favourites:
+        conditions.append("r.is_favourite = 1")
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
     sql += " ORDER BY casefold(r.title)"
@@ -254,27 +292,42 @@ def lines_by_recipe(conn):
 
 
 def _recipe_params(recipe):
-    """The optional columns (photo, source link) default to NULL."""
-    return {"photo_filename": None, "source_url": None, **recipe}
+    """The optional columns (photo, source link) default to NULL, and a new recipe isn't a favourite."""
+    return {"photo_filename": None, "source_url": None, "is_favourite": False, **recipe}
 
 
 def create_recipe(conn, recipe, lines):
     """Insert a recipe, its lines and its tags (`recipe["tags"]`, optional); unknown ingredient
     names are added to the catalogue."""
     with conn:
-        cur = conn.execute(
-            """INSERT INTO recipes (title, photo_filename, source_url, servings, prep_minutes, cook_minutes,
-                                    instructions, notes)
-               VALUES (:title, :photo_filename, :source_url, :servings, :prep_minutes, :cook_minutes,
-                       :instructions, :notes)""",
-            _recipe_params(recipe))
-        _save_lines(conn, cur.lastrowid, lines)
-        _save_tags(conn, cur.lastrowid, recipe.get("tags", []))
+        return _insert_recipe(conn, recipe, lines)
+
+
+def _insert_recipe(conn, recipe, lines):
+    cur = conn.execute(
+        """INSERT INTO recipes (title, photo_filename, source_url, servings, prep_minutes, cook_minutes,
+                                instructions, notes, is_favourite)
+           VALUES (:title, :photo_filename, :source_url, :servings, :prep_minutes, :cook_minutes,
+                   :instructions, :notes, :is_favourite)""",
+        _recipe_params(recipe))
+    _save_lines(conn, cur.lastrowid, lines)
+    _save_tags(conn, cur.lastrowid, recipe.get("tags", []))
     return cur.lastrowid
 
 
+def has_favourites(conn):
+    return conn.execute("SELECT 1 FROM recipes WHERE is_favourite = 1").fetchone() is not None
+
+
+def set_favourite(conn, recipe_id, favourite):
+    """Doesn't change `updated_at`: starring a recipe isn't editing it."""
+    with conn:
+        conn.execute("UPDATE recipes SET is_favourite = ? WHERE id = ?", (int(favourite), recipe_id))
+
+
 def update_recipe(conn, recipe_id, recipe, lines):
-    """Replace everything, including the photo: pass the current `photo_filename` to keep it."""
+    """Replace everything, including the photo: pass the current `photo_filename` to keep it.
+    The favourite mark is kept."""
     with conn:
         conn.execute(
             """UPDATE recipes
@@ -373,6 +426,18 @@ def delete_menu(conn, menu_id):
         conn.execute("DELETE FROM menus WHERE id = ?", (menu_id,))
 
 
+def copy_menu(conn, menu_id, name):
+    """A new menu called `name` with the same entries. The shopping list isn't copied: it is built
+    from the new menu on its first visit."""
+    with conn:
+        new_id = conn.execute("INSERT INTO menus (name) VALUES (?)", (name,)).lastrowid
+        conn.execute(
+            """INSERT INTO menu_items (menu_id, recipe_id, day, meal, servings)
+               SELECT ?, recipe_id, day, meal, servings FROM menu_items WHERE menu_id = ? ORDER BY id""",
+            (new_id, menu_id))
+    return new_id
+
+
 def get_menu_items(conn, menu_id):
     """The menu's entries in the order they were added, with the recipe's title and servings."""
     return conn.execute(
@@ -450,3 +515,79 @@ def delete_shopping_item(conn, item_id):
     """Only items added by hand can be deleted (the others come back on rebuild). Returns False otherwise."""
     with conn:
         return conn.execute("DELETE FROM shopping_items WHERE id = ? AND is_manual = 1", (item_id,)).rowcount > 0
+
+
+# --- JSON export / import (the file format is described in services/backup.py) ---
+
+def export_data(conn):
+    """Units, ingredients, recipes and menus as plain lists and dicts. Photos and shopping lists are left out."""
+    lines, tags = lines_by_recipe(conn), tags_by_recipe(conn)
+    return {
+        "units": [{"name": u["name"], "grams": u["grams"]} for u in list_units(conn)],
+        "ingredients": [{"name": i["name"], **{field: i[field] for field in INGREDIENT_VALUE_FIELDS}}
+                        for i in conn.execute("SELECT * FROM ingredients ORDER BY casefold(name)")],
+        "recipes": [{"id": r["id"], "title": r["title"], "source_url": r["source_url"], "servings": r["servings"],
+                     "prep_minutes": r["prep_minutes"], "cook_minutes": r["cook_minutes"],
+                     "instructions": r["instructions"], "notes": r["notes"],
+                     "is_favourite": bool(r["is_favourite"]), "tags": [tag["name"] for tag in tags[r["id"]]],
+                     "ingredients": [{"name": line["name"], "quantity": line["quantity"], "unit": line["unit"],
+                                      "note": line["note"]} for line in lines[r["id"]]]}
+                    for r in conn.execute("SELECT * FROM recipes ORDER BY id")],
+        "menus": [{"name": m["name"],
+                   "items": [{"recipe": item["recipe_id"], "day": item["day"], "meal": item["meal"],
+                              "servings": item["servings"]} for item in get_menu_items(conn, m["id"])]}
+                  for m in conn.execute("SELECT id, name FROM menus ORDER BY id")],
+    }
+
+
+def import_data(conn, data):
+    """Add the contents of a checked export file (services/backup.py: parse_import), all in one transaction.
+
+    Nothing already here is changed: a unit, ingredient, recipe or menu with the same name (ignoring
+    case) is kept as it is, and the file's recipes and menus use the one already here. Returns how many
+    of each were added.
+    """
+    added = dict.fromkeys(("units", "ingredients", "recipes", "menus"), 0)
+    with conn:
+        unit_ids = {}
+        for unit in data["units"]:
+            existing = find_unit(conn, unit["name"])
+            if existing is None:
+                unit_ids[casefold(unit["name"])] = conn.execute(
+                    "INSERT INTO units (name, grams) VALUES (:name, :grams)", unit).lastrowid
+                added["units"] += 1
+            else:
+                unit_ids[casefold(unit["name"])] = existing["id"]
+
+        for ingredient in data["ingredients"]:
+            if find_ingredient(conn, ingredient["name"]) is None:
+                _insert_ingredient(conn, ingredient["name"], ingredient)
+                added["ingredients"] += 1
+
+        # Only recipes and menus from before the import count, so two with the same title in the file are both added
+        existing_recipes = {}
+        for row in conn.execute("SELECT id, title FROM recipes ORDER BY id"):
+            existing_recipes.setdefault(name_key(row["title"]), row["id"])
+        existing_menus = {name_key(row["name"]) for row in conn.execute("SELECT name FROM menus")}
+
+        recipe_ids = {}  # id in the file -> id here
+        for recipe in data["recipes"]:
+            existing = existing_recipes.get(name_key(recipe["title"]))
+            if existing is not None:
+                recipe_ids[recipe["id"]] = existing
+                continue
+            lines = [{**line, "unit_id": unit_ids[casefold(line["unit"])] if line["unit"] else None}
+                     for line in recipe["ingredients"]]
+            recipe_ids[recipe["id"]] = _insert_recipe(conn, recipe, lines)
+            added["recipes"] += 1
+
+        for menu in data["menus"]:
+            if name_key(menu["name"]) in existing_menus:
+                continue
+            menu_id = conn.execute("INSERT INTO menus (name) VALUES (?)", (menu["name"],)).lastrowid
+            conn.executemany(
+                "INSERT INTO menu_items (menu_id, recipe_id, day, meal, servings) VALUES (?, ?, ?, ?, ?)",
+                [(menu_id, recipe_ids[item["recipe"]], item["day"], item["meal"], item["servings"])
+                 for item in menu["items"]])
+            added["menus"] += 1
+    return added

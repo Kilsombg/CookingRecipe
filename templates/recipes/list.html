@@ -10,15 +10,19 @@
 
 <form method="get" action="{{ url_for('recipes.index') }}" role="search">
   {% if tag %}<input type="hidden" name="tag" value="{{ tag.id }}">{% endif %}
+  {% if favourites %}<input type="hidden" name="fav" value="1">{% endif %}
   <input type="search" name="q" value="{{ q }}" placeholder="{{ t('recipes.search_placeholder') }}"
          aria-label="{{ t('recipes.search_placeholder') }}">
   <button type="submit">{{ t("btn.search") }}</button>
 </form>
 
-{% if tags %}
+{# Favourites work like one more tag: choosing it or a tag replaces the other. #}
+{% if tags or has_favourites or favourites %}
   <nav class="tag-filter" aria-label="{{ t('label.tags') }}">
     <a href="{{ url_for('recipes.index', q=q or none) }}" class="tag"
-       {% if not tag %}aria-current="true"{% endif %}>{{ t("recipes.all_tags") }}</a>
+       {% if not tag and not favourites %}aria-current="true"{% endif %}>{{ t("recipes.all_tags") }}</a>
+    <a href="{{ url_for('recipes.index', q=q or none, fav=1) }}" class="tag"
+       {% if favourites %}aria-current="true"{% endif %}>★ {{ t("recipes.favourites") }}</a>
     {% for item in tags %}
       <a href="{{ url_for('recipes.index', q=q or none, tag=item.id) }}" class="tag"
          {% if tag and tag.id == item.id %}aria-current="true"{% endif %}>{{ item.name }}</a>
@@ -37,7 +41,11 @@
             <img src="{{ url_for('static', filename='placeholder.svg') }}" alt="">
           {% endif %}
         </a>
-        <h3><a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h3>
+        <h3>
+          {% if recipe.is_favourite %}<span class="favourite-star" title="{{ t('recipes.favourite') }}"
+                                            aria-label="{{ t('recipes.favourite') }}">★</span>{% endif %}
+          <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
+        </h3>
         <p class="recipe-meta">
           <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
           {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
@@ -62,7 +70,7 @@
       </article>
     {% endfor %}
   </div>
-{% elif q or tag %}
+{% elif q or tag or favourites %}
   <p>{{ t("recipes.no_results") }}</p>
 {% else %}
   <p>{{ t("recipes.empty") }}</p>

@@ -1,4 +1,4 @@
-"""Recipes: card list with search and tag filter, detail, create/edit/delete, photo upload."""
+"""Recipes: card list with search, tag and favourites filter, detail, create/edit/delete, favourite, photo upload."""
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
@@ -97,11 +97,13 @@ def index():
     q = request.args.get("q", "").strip()
     tags = db.list_tags(conn)
     tag = next((tag for tag in tags if str(tag["id"]) == request.args.get("tag")), None)
-    recipes = db.list_recipes(conn, q, tag["id"] if tag else None)
+    favourites = request.args.get("fav") == "1"
+    recipes = db.list_recipes(conn, q, tag["id"] if tag else None, favourites)
     lines = db.lines_by_recipe(conn)
     macros = {r["id"]: recipe_macros(lines.get(r["id"], []), r["servings"]) for r in recipes}
     return render_template("recipes/list.html", recipes=recipes, macros=macros, q=q, tags=tags,
-                           tag=tag, recipe_tags=db.tags_by_recipe(conn))
+                           tag=tag, favourites=favourites, has_favourites=db.has_favourites(conn),
+                           recipe_tags=db.tags_by_recipe(conn))
 
 
 @bp.get("/new")
@@ -142,6 +144,13 @@ def edit(recipe_id):
 def update(recipe_id):
     _load(recipe_id)
     return _save(recipe_id)
+
+
+@bp.post("/<int:recipe_id>/favourite")
+def favourite(recipe_id):
+    _load(recipe_id)
+    db.set_favourite(db.get_db(), recipe_id, request.form.get("favourite") == "1")
+    return redirect(url_for(".detail", recipe_id=recipe_id))
 
 
 @bp.post("/<int:recipe_id>/delete")

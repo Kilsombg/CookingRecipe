@@ -15,6 +15,7 @@ INGREDIENT_VALUE_FIELDS = INGREDIENT_FIELDS[1:]
 GRAM_MACRO_FIELDS = ("protein_100g", "carbs_100g", "fat_100g")
 MENU_ITEM_FIELDS = ("recipe_id", "day", "meal", "servings")
 SHOPPING_ITEM_FIELDS = ("name", "quantity", "unit")
+UNIT_FIELDS = ("name", "grams")
 DAYS = range(7)  # 0 = Monday … 6 = Sunday, as stored in menu_items.day
 MEALS = ("breakfast", "lunch", "dinner", "snack")  # stored in English, shown translated
 
@@ -261,3 +262,19 @@ def parse_shopping_item(fields):
     if error:
         errors["quantity"] = error
     return {"name": name, "quantity": quantity, "unit": clean_name(fields.get("unit"))}, errors
+
+
+def parse_unit(fields):
+    """Validate a unit form (add or edit).
+
+    fields: raw strings keyed by UNIT_FIELDS. Empty grams makes a piece unit, like "бр.".
+    Returns (unit, errors), with errors keyed by field name.
+    """
+    errors = {}
+    name = clean_name(fields.get("name"))
+    if name is None:
+        errors["name"] = "error.required"
+    grams, error = _decimal(fields.get("grams"), allow_zero=False)
+    if error:
+        errors["grams"] = error
+    return {"name": name, "grams": grams}, errors

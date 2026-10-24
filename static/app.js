@@ -1,9 +1,10 @@
 // Small conveniences on top of plain HTML forms.
 // No texts live here: they come from data- attributes in the templates.
 
-// <form data-confirm="..."> asks before submitting (used for deletes).
+// <form data-confirm="..."> asks before submitting (used for deletes). A submit button can have its
+// own data-confirm, for a delete button inside an edit form.
 document.addEventListener("submit", (event) => {
-  const message = event.target.dataset.confirm;
+  const message = event.submitter?.dataset.confirm ?? event.target.dataset.confirm;
   if (message && !confirm(message)) {
     event.preventDefault();
   }

@@ -144,7 +144,12 @@
   </label>
 </form>
 
-<form method="post" action="{{ url_for('menus.delete', menu_id=menu.id) }}" data-confirm="{{ t('menus.confirm_delete') }}">
-  <button type="submit" class="secondary">{{ t("menus.delete") }}</button>
-</form>
+<div class="actions">
+  <form method="post" action="{{ url_for('menus.copy', menu_id=menu.id) }}">
+    <button type="submit" class="secondary">{{ t("menus.copy") }}</button>
+  </form>
+  <form method="post" action="{{ url_for('menus.delete', menu_id=menu.id) }}" data-confirm="{{ t('menus.confirm_delete') }}">
+    <button type="submit" class="secondary">{{ t("menus.delete") }}</button>
+  </form>
+</div>
 {% endblock %}

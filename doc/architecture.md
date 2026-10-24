@@ -47,19 +47,22 @@ CookingRecipe/
 ├── i18n.py                # UI language: current language, t() lookup, language switch route
 ├── translations.py        # UI texts: {"en": {...}, "bg": {...}}
 ├── migrations/            # numbered SQL files, applied in order on startup
-│   └── 0001_initial.sql
+│   ├── 0001_initial.sql
+│   └── 0002_add_favourite.sql
 ├── routes/
 │   ├── recipes.py         # recipe list, detail, create/edit/delete, photo upload
 │   ├── ingredients.py     # ingredient catalogue
 │   ├── units.py           # units page
 │   ├── menus.py           # menus and menu items
-│   └── shopping.py        # shopping list from a menu
+│   ├── shopping.py        # shopping list from a menu
+│   └── data.py            # JSON export / import
 ├── services/
 │   ├── text.py            # name_key() / casefold helpers for Cyrillic
 │   ├── forms.py           # form parsing/validation (numbers accept "0,5" and "0.5"), errors as translation keys
 │   ├── photos.py          # photo check/resize with Pillow, saving and deleting the files
 │   ├── macros.py          # grams conversion, recipe and menu macro totals
-│   └── shopping_list.py   # merging and scaling ingredients
+│   ├── shopping_list.py   # merging and scaling ingredients
+│   └── backup.py          # JSON export file format, checking an uploaded file
 ├── templates/
 │   ├── base.html          # layout, navigation, flash messages, <meta charset="utf-8">
 │   ├── error.html         # simple error page (upload over the size limit)
@@ -68,7 +71,8 @@ CookingRecipe/
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
 │   ├── menus/             # list.html (with the new-menu form), detail.html (add recipe, rename)
-│   └── shopping/          # list.html
+│   ├── shopping/          # list.html
+│   └── data/              # index.html (export / import)
 ├── static/
 │   ├── pico.min.css
 │   ├── app.css            # small custom styles (card grid, print styles)
@@ -90,12 +94,13 @@ CookingRecipe/
 | Method | URL | Purpose |
 |--------|-----|---------|
 | GET | `/` | Redirects to `/recipes` |
-| GET | `/recipes?q=&tag=` | Recipe card grid. `q` searches titles and ingredient names (ignoring case); `tag` is a tag id |
+| GET | `/recipes?q=&tag=&fav=1` | Recipe card grid. `q` searches titles and ingredient names (ignoring case); `tag` is a tag id; `fav=1` shows only favourites |
 | GET | `/recipes/new` | New recipe form |
 | POST | `/recipes` | Create a recipe (adds new ingredient names to the catalogue), with an optional photo |
 | GET | `/recipes/<id>` | Recipe detail with calculated macros |
 | GET | `/recipes/<id>/edit` | Edit form |
 | POST | `/recipes/<id>` | Update a recipe; a new photo replaces the old one, `remove_photo=1` removes it |
+| POST | `/recipes/<id>/favourite` | Mark (`favourite=1`) or unmark (`favourite=0`) a favourite |
 | POST | `/recipes/<id>/delete` | Delete a recipe (and its photo file) |
 | GET | `/images/<filename>` | Serve an uploaded photo |
 | GET | `/ingredients?q=&missing=1` | Ingredient catalogue, with search and a "missing data" filter (a macro is empty, or a recipe uses it in pieces without grams per piece) |
@@ -104,13 +109,15 @@ CookingRecipe/
 | GET | `/ingredients/<id>/edit?next=` | Edit form (macros per 100 g, grams per piece). `next` (a path on this site) is where Save and Cancel go back to, e.g. the recipe that linked here |
 | POST | `/ingredients/<id>` | Update an ingredient |
 | POST | `/ingredients/<id>/delete` | Delete, only if no recipe uses it |
-| GET | `/units` | List of units, with an inline add/rename form |
-| POST | `/units` | Add a unit |
+| GET | `/units` | List of units with how many recipes use each, an inline edit form per unit, and an add form |
+| POST | `/units` | Add a unit (name unique ignoring case; empty grams = a piece unit) |
 | POST | `/units/<id>` | Rename a unit or change its grams |
+| POST | `/units/<id>/delete` | Delete a unit, only if no recipe uses it |
 | GET | `/menus` | List of menus |
 | POST | `/menus` | Create a menu |
 | GET | `/menus/<id>?day=&meal=` | Menu detail, grouped by day/meal, with macro totals. `day`/`meal` preselect the add-recipe form (set after adding a recipe) |
 | POST | `/menus/<id>` | Rename a menu |
+| POST | `/menus/<id>/copy` | Copy a menu with its recipes as "Name (copy)", then open the copy |
 | POST | `/menus/<id>/delete` | Delete a menu |
 | POST | `/menus/<id>/items` | Add a recipe to a menu |
 | POST | `/menus/<id>/items/<item_id>/delete` | Remove a recipe from a menu |
@@ -119,6 +126,9 @@ CookingRecipe/
 | POST | `/shopping/items` | Add an item by hand (`menu_id` in the form) |
 | POST | `/shopping/items/<id>/toggle` | Tick (`checked=1`) or untick (`checked=0`) an item; called from JS, answers 204 |
 | POST | `/shopping/items/<id>/delete` | Remove an item added by hand |
+| GET | `/data` | Export and import page |
+| GET | `/data/export` | Download everything (except photos and shopping lists) as `cookingrecipe-YYYYMMDD-HHMMSS.json` |
+| POST | `/data/import` | Add the contents of an exported file (`file` in the form), after backing up the database |
 | POST | `/language` | Switch the UI language (`en` / `bg`), then go back to the same page |
 
 HTML forms can only send GET and POST, so updates and deletes use POST with `/delete` or a plain POST to the resource URL.
@@ -176,6 +186,14 @@ Tests check that `en` and `bg` in `translations.py` have exactly the same keys, 
 
 The source link is stored only when it is an `http`/`https` address (`youtube.com/…` gets `https://` added). It opens in a new tab with `rel="noopener noreferrer"`, and its text is the site name (`youtube.com`).
 
+## JSON export / import
+
+The file format is described at the top of `services/backup.py`. In short: one object with `units`, `ingredients`, `recipes` (with their ingredient lines and tags) and `menus`, plus a `format`/`version` header. Everything is referred to by name, except menu items, which point at a recipe's `id` inside the same file, because two recipes can have the same title. The file is UTF-8 with Cyrillic written as is, not as `\u` escapes, so it can be read in Notepad.
+
+- **Not included:** photos (they would make the file huge; the photo files are in `images/`) and shopping lists (they are rebuilt from the menu).
+- **Import adds, never replaces.** A unit, ingredient, recipe or menu that already exists with the same name (ignoring case) is kept exactly as it is, and the file's recipes and menus use the one that is already here. So importing the same file twice adds nothing the second time.
+- **Checked first, saved in one go.** `parse_import()` checks the whole file with the same rules as the forms (required fields, numbers in range, `http`/`https` source links only, a quantity needs a unit), and reports the first problem with its place in the file, e.g. `recipes[2].servings`. Only a valid file is saved, in one transaction, after a copy of the database is made in `backups/`.
+
 ## Running
 
 - `python app.py` starts Flask on `127.0.0.1:5000`, so it is only reachable from this PC.
@@ -199,6 +217,7 @@ python app.py
 - `pytest` tests the logic in `services/`:
   - `macros.py`: converting to grams for every kind of unit, `бр.` with and without grams per piece, missing macros, NULL quantities, per-serving division
   - `shopping_list.py`: merging, scaling, NULL quantities
+  - `backup.py`: every kind of bad value in an import file is rejected with its place in the file
   - `text.py`: Cyrillic case folding (`"  Пилешко   ФИЛЕ " → "пилешко филе"`)
   - `photos.py`: accepted formats, resizing, EXIF rotation, transparency, size limit
 - `translations.py`: English and Bulgarian have the same set of keys. `i18n.py`: fallback to English, unknown cookie value, placeholders.

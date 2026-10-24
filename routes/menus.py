@@ -1,4 +1,4 @@
-"""Menus: list, create, rename, delete; add and remove recipes by day and meal; macro totals."""
+"""Menus: list, create, rename, copy, delete; add and remove recipes by day and meal; macro totals."""
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
@@ -84,6 +84,15 @@ def delete(menu_id):
     db.delete_menu(db.get_db(), menu_id)
     flash(t("menus.msg_deleted", name=menu["name"]), "success")
     return redirect(url_for(".index"))
+
+
+@bp.post("/<int:menu_id>/copy")
+def copy(menu_id):
+    menu = _load(menu_id)
+    name = t("menus.copy_name", name=menu["name"])
+    new_id = db.copy_menu(db.get_db(), menu_id, name)
+    flash(t("menus.msg_copied", name=name), "success")
+    return redirect(url_for(".detail", menu_id=new_id))
 
 
 @bp.post("/<int:menu_id>/items")

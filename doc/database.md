@@ -53,7 +53,7 @@ Each ingredient is entered once, with its macros **per 100 g**, and is then reus
 
 ### `units`
 
-The units you can choose for an ingredient line. Each unit knows how many grams it equals, which is what lets the app turn "2 с.л." into grams for the macro calculation. The starting units are added by the first migration, and you can rename them or add new ones.
+The units you can choose for an ingredient line. Each unit knows how many grams it equals, which is what lets the app turn "2 с.л." into grams for the macro calculation. The starting units are added by the first migration, and you can rename them or add new ones on the Units page. Names are unique ignoring upper/lower case (checked by the form; the column itself is case-sensitive). A unit can be deleted only while no recipe uses it. Saved shopping lists keep the old label until they are rebuilt.
 
 | Column | Type | Null? | Notes |
 |--------|------|-------|-------|
@@ -89,6 +89,7 @@ The volume units (мл, л, spoons, cups) treat everything as weighing the same 
 | cook_minutes | INTEGER | yes | |
 | instructions | TEXT | no | One step per line |
 | notes | TEXT | yes | |
+| is_favourite | INTEGER | no | 0/1, default 0. Added by `0002_add_favourite.sql`. Changing it doesn't touch `updated_at` |
 | created_at | TEXT | no | |
 | updated_at | TEXT | no | |
 
@@ -126,6 +127,8 @@ There are no macro columns: a recipe's macros are **calculated** from its ingred
 | id | INTEGER PK | no | |
 | name | TEXT | no | "Седмица 12 ноември" |
 | created_at | TEXT | no | |
+
+Copying a menu inserts a new `menus` row and copies its `menu_items`; the shopping list is not copied.
 
 ### `menu_items`
 
@@ -207,7 +210,7 @@ Every change to the database structure is a numbered SQL file in the `migrations
 ```
 migrations/
 ├── 0001_initial.sql          # all tables + starting units
-├── 0002_add_favourite.sql    # example of a later change
+├── 0002_add_favourite.sql    # recipes.is_favourite
 └── ...
 ```
 

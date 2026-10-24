@@ -11,7 +11,16 @@
     {% if recipe.photo_filename %}
       <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="{{ recipe.title }}" class="recipe-photo">
     {% endif %}
-    <h1>{{ recipe.title }}</h1>
+    <div class="page-head">
+      <h1>{{ recipe.title }}</h1>
+      <form method="post" action="{{ url_for('recipes.favourite', recipe_id=recipe.id) }}" class="favourite-form">
+        {% if recipe.is_favourite %}
+          <button type="submit" name="favourite" value="0" class="secondary" aria-pressed="true">★ {{ t("recipes.favourite") }}</button>
+        {% else %}
+          <button type="submit" name="favourite" value="1" class="secondary outline" aria-pressed="false">☆ {{ t("recipes.add_favourite") }}</button>
+        {% endif %}
+      </form>
+    </div>
     <p class="recipe-meta">
       <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
       {% if recipe.prep_minutes is not none %}<span>{{ t("recipes.prep", n=recipe.prep_minutes) }}</span>{% endif %}
