@@ -10,11 +10,11 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] `start.bat`
 
 ## M1 — Database and migrations
-- [ ] `migrations/0001_initial.sql` (all tables + starting units)
-- [ ] Migration runner in `db.py`: `user_version`, one transaction per file, backup before migrating
-- [ ] `casefold` SQL function registered on every connection
-- [ ] `services/text.py` + tests
-- [ ] Tests: migrations apply to an empty database; Bulgarian text is saved and loaded correctly
+- [x] `migrations/0001_initial.sql` (all tables + starting units)
+- [x] Migration runner in `db.py`: `user_version`, one transaction per file, backup before migrating
+- [x] `casefold` SQL function registered on every connection
+- [x] `services/text.py` + tests
+- [x] Tests: migrations apply to an empty database; Bulgarian text is saved and loaded correctly
 
 ## M2 — Interface language (English / Bulgarian)
 - [ ] `translations.py` with `en` and `bg` texts for everything that exists so far (navigation, home page)
