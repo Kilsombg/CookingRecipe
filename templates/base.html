@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="bg">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Рецепти{% endblock %}</title>
+  <title>{% block title %}CookingRecipe{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
 <body>
   <header class="container">
@@ -13,9 +14,21 @@
         <li><strong><a href="/" class="contrast">CookingRecipe</a></strong></li>
       </ul>
       <ul>
-        <li><a href="/recipes">Recipes</a></li>
-        <li><a href="/ingredients">Ingredients</a></li>
-        <li><a href="/menus">Menus</a></li>
+        <li><a href="/recipes">{{ t("nav.recipes") }}</a></li>
+        <li><a href="/ingredients">{{ t("nav.ingredients") }}</a></li>
+        <li><a href="/menus">{{ t("nav.menus") }}</a></li>
+        <li>
+          <form method="post" action="{{ url_for('i18n.set_language') }}" class="lang-switch"
+                aria-label="{{ t('nav.language') }}">
+            <input type="hidden" name="next"
+                   value="{{ request.full_path if request.query_string else request.path }}">
+            {% for code, label in languages.items() %}
+              {% if not loop.first %}<span aria-hidden="true">|</span>{% endif %}
+              <button type="submit" name="lang" value="{{ code }}"
+                      {% if code == lang %}aria-current="true"{% endif %}>{{ label }}</button>
+            {% endfor %}
+          </form>
+        </li>
       </ul>
     </nav>
   </header>

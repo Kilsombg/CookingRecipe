@@ -17,10 +17,10 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] Tests: migrations apply to an empty database; Bulgarian text is saved and loaded correctly
 
 ## M2 — Interface language (English / Bulgarian)
-- [ ] `translations.py` with `en` and `bg` texts for everything that exists so far (navigation, home page)
-- [ ] `i18n.py`: `get_lang()` from the `lang` cookie (default `en`), `t()` with fallback to English, Jinja globals
-- [ ] `POST /language` + `EN | БГ` switch in the navigation; `<html lang>` follows the chosen language
-- [ ] Test: `en` and `bg` have the same keys
+- [x] `translations.py` with `en` and `bg` texts for everything that exists so far (navigation, home page)
+- [x] `i18n.py`: `get_lang()` from the `lang` cookie (default `en`), `t()` with fallback to English, Jinja globals
+- [x] `POST /language` + `EN | БГ` switch in the navigation; `<html lang>` follows the chosen language
+- [x] Test: `en` and `bg` have the same keys
 
 **From here on:** every new page, button, message and label is added to `translations.py` in both languages, never written directly in a template. Recipe content is never translated.
 

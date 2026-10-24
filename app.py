@@ -1,12 +1,14 @@
 from flask import Flask, render_template
 
 import db
+import i18n
 
 
 def create_app():
     db.init_db()
 
     app = Flask(__name__)
+    i18n.init_app(app)
 
     @app.get("/")
     def index():
