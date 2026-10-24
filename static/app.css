@@ -286,3 +286,76 @@ td.num {
 .menu-macros tfoot td {
   font-weight: bold;
 }
+
+/* Shopping list: a tick per item, crossed out once ticked; items added by hand have a remove button */
+.shopping-list {
+  padding: 0;
+}
+
+.shopping-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.shopping-list label {
+  margin: 0;
+}
+
+.shopping-list small {
+  margin-left: 0.5rem;
+  color: var(--pico-muted-color);
+}
+
+.shopping-list input:checked + span {
+  text-decoration: line-through;
+  color: var(--pico-muted-color);
+}
+
+.shopping-list form {
+  margin: 0 0 0 auto;
+}
+
+.shopping-list button {
+  width: auto;
+  margin: 0;
+  padding: 0.1rem 0.6rem;
+}
+
+.help {
+  display: block;
+  color: var(--pico-muted-color);
+}
+
+/* Printing: just the list, in black on white, with empty boxes to tick by pen */
+@media print {
+  header,
+  .no-print,
+  .flash {
+    display: none !important;
+  }
+
+  /* Also in dark mode, which would otherwise print light text */
+  body,
+  h1,
+  h2,
+  hgroup p {
+    background: #fff;
+    color: #000;
+  }
+
+  .shopping-list li {
+    break-inside: avoid;
+  }
+
+  .shopping-list input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: checkbox;
+  }
+
+  .shopping-list small,
+  .shopping-list input:checked + span {
+    color: #000;
+  }
+}

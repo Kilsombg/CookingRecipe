@@ -114,10 +114,11 @@ CookingRecipe/
 | POST | `/menus/<id>/delete` | Delete a menu |
 | POST | `/menus/<id>/items` | Add a recipe to a menu |
 | POST | `/menus/<id>/items/<item_id>/delete` | Remove a recipe from a menu |
-| GET | `/menus/<id>/shopping` | Shopping list for the menu |
+| GET | `/menus/<id>/shopping` | Shopping list for the menu, built and saved on the first visit |
 | POST | `/menus/<id>/shopping/regenerate` | Rebuild the list from the current menu |
-| POST | `/shopping/items` | Add an item by hand |
-| POST | `/shopping/items/<id>/toggle` | Tick or untick an item (called from JS) |
+| POST | `/shopping/items` | Add an item by hand (`menu_id` in the form) |
+| POST | `/shopping/items/<id>/toggle` | Tick (`checked=1`) or untick (`checked=0`) an item; called from JS, answers 204 |
+| POST | `/shopping/items/<id>/delete` | Remove an item added by hand |
 | POST | `/language` | Switch the UI language (`en` / `bg`), then go back to the same page |
 
 HTML forms can only send GET and POST, so updates and deletes use POST with `/delete` or a plain POST to the resource URL.

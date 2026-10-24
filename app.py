@@ -5,7 +5,7 @@ from flask import Flask, redirect, render_template, send_from_directory, url_for
 import config
 import db
 import i18n
-from routes import ingredients, menus, recipes
+from routes import ingredients, menus, recipes, shopping
 from services.forms import url_host
 from services.macros import MACROS
 
@@ -34,6 +34,7 @@ def create_app(overrides=None):
     app.register_blueprint(recipes.bp)
     app.register_blueprint(ingredients.bp)
     app.register_blueprint(menus.bp)
+    app.register_blueprint(shopping.bp)
 
     @app.get("/")
     def index():

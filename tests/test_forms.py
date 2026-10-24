@@ -1,7 +1,8 @@
 import pytest
 
 from services.forms import (clean_name, format_number, parse_ingredient, parse_menu_item, parse_menu_name,
-                            parse_number, parse_recipe, parse_source_url, parse_tags, url_host)
+                            parse_number, parse_recipe, parse_shopping_item, parse_source_url, parse_tags,
+                            url_host)
 
 UNIT_IDS = {1, 8}  # г, бр.
 
@@ -207,4 +208,23 @@ def test_menu_item_day_and_meal_are_optional_and_servings_default_to_the_recipe(
 ])
 def test_bad_menu_item_fields(field, value, error):
     _, errors = parse_menu_item(menu_fields(**{field: value}), RECIPE_SERVINGS)
+    assert errors == {field: error}
+
+
+def test_shopping_item_quantity_and_unit_are_optional():
+    item, errors = parse_shopping_item({"name": "  Тоалетна   хартия ", "quantity": "", "unit": ""})
+    assert errors == {}
+    assert item == {"name": "Тоалетна хартия", "quantity": None, "unit": None}
+
+    item, errors = parse_shopping_item({"name": "Мляко", "quantity": "1,5", "unit": " л "})
+    assert item == {"name": "Мляко", "quantity": 1.5, "unit": "л"}
+
+
+@pytest.mark.parametrize("field, value, error", [
+    ("name", " ", "error.required"),
+    ("quantity", "0", "error.positive_number"),
+    ("quantity", "две", "error.number"),
+])
+def test_bad_shopping_item_fields(field, value, error):
+    _, errors = parse_shopping_item({"name": "Мляко", "quantity": "", "unit": ""} | {field: value})
     assert errors == {field: error}

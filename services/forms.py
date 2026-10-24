@@ -14,6 +14,7 @@ INGREDIENT_FIELDS = ("name", "calories_100g", "protein_100g", "carbs_100g", "fat
 INGREDIENT_VALUE_FIELDS = INGREDIENT_FIELDS[1:]
 GRAM_MACRO_FIELDS = ("protein_100g", "carbs_100g", "fat_100g")
 MENU_ITEM_FIELDS = ("recipe_id", "day", "meal", "servings")
+SHOPPING_ITEM_FIELDS = ("name", "quantity", "unit")
 DAYS = range(7)  # 0 = Monday … 6 = Sunday, as stored in menu_items.day
 MEALS = ("breakfast", "lunch", "dinner", "snack")  # stored in English, shown translated
 
@@ -243,3 +244,20 @@ def parse_menu_item(fields, recipe_servings):
         servings = recipe_servings[recipe_id]
 
     return {"recipe_id": recipe_id, "day": day, "meal": meal, "servings": servings}, errors
+
+
+def parse_shopping_item(fields):
+    """Validate the "add an item by hand" form.
+
+    fields: raw strings keyed by SHOPPING_ITEM_FIELDS. Quantity and unit are optional and free:
+    "тоалетна хартия", "2 пакета" and "1 кг" are all fine.
+    Returns (item, errors), with errors keyed by field name.
+    """
+    errors = {}
+    name = clean_name(fields.get("name"))
+    if name is None:
+        errors["name"] = "error.required"
+    quantity, error = _decimal(fields.get("quantity"), allow_zero=False)
+    if error:
+        errors["quantity"] = error
+    return {"name": name, "quantity": quantity, "unit": clean_name(fields.get("unit"))}, errors

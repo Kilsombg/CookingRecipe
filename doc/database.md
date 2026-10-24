@@ -196,7 +196,9 @@ for each menu_item in the menu:
         else: total[key] += quantity × factor
 ```
 
-Matching is done by `ingredient_id`, so the same ingredient is always combined, even if it was typed in a different letter case. "Regenerate" deletes the menu's rows where `is_manual = 0` and inserts the new totals; items added by hand are kept.
+Matching is done by `ingredient_id`, so the same ingredient is always combined, even if it was typed in a different letter case. A line without a quantity has no unit either (the recipe form requires both or neither), so an ingredient "to taste" is listed once; it is left out when the same ingredient is also needed with a quantity, since you are buying it anyway.
+
+The list is built and saved on the first visit. After that it only changes on "Regenerate", which deletes the menu's rows where `is_manual = 0` and inserts the new totals. Items added by hand are kept, and a rebuilt item keeps its tick only if its name, quantity and unit are unchanged.
 
 ## Migrations
 

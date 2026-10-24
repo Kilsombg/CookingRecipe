@@ -221,3 +221,40 @@ def test_deleting_a_recipe_or_menu_removes_its_items(conn):
                                      "day": 0, "meal": None, "servings": 1})
     db.delete_menu(conn, menu_id)
     assert conn.execute("SELECT COUNT(*) FROM menu_items").fetchone()[0] == 0
+
+
+def shopping(conn, menu_id):
+    return [(i["name"], i["quantity"], i["unit"], i["checked"], i["is_manual"])
+            for i in db.get_shopping_items(conn, menu_id)]
+
+
+def test_shopping_items_rebuild_keeps_manual_items_and_unchanged_ticks(conn):
+    menu_id = db.create_menu(conn, "Седмица")
+    assert not db.has_built_shopping_items(conn, menu_id)
+    db.replace_shopping_items(conn, menu_id, [{"name": "Ориз", "quantity": 200, "unit": "г"},
+                                              {"name": "Сол", "quantity": None, "unit": None}])
+    manual_id = db.add_shopping_item(conn, menu_id, {"name": "Тоалетна хартия", "quantity": None, "unit": None})
+    assert db.has_built_shopping_items(conn, menu_id)
+    rice, salt, _ = [i["id"] for i in db.get_shopping_items(conn, menu_id)]
+    for item_id in (rice, salt, manual_id):
+        assert db.set_shopping_item_checked(conn, item_id, True)
+    assert not db.set_shopping_item_checked(conn, 999, True)
+
+    # The rice amount changed, so it needs buying again; the salt is the same and stays ticked
+    db.replace_shopping_items(conn, menu_id, [{"name": "Сол", "quantity": None, "unit": None},
+                                              {"name": "Ориз", "quantity": 300, "unit": "г"}])
+    assert shopping(conn, menu_id) == [("Сол", None, None, 1, 0), ("Ориз", 300, "г", 0, 0),
+                                       ("Тоалетна хартия", None, None, 1, 1)]
+
+
+def test_only_manual_shopping_items_can_be_deleted(conn):
+    menu_id = db.create_menu(conn, "Седмица")
+    db.replace_shopping_items(conn, menu_id, [{"name": "Ориз", "quantity": 200, "unit": "г"}])
+    manual_id = db.add_shopping_item(conn, menu_id, {"name": "Мляко", "quantity": 1, "unit": "л"})
+    built_id = db.get_shopping_items(conn, menu_id)[0]["id"]
+    assert not db.delete_shopping_item(conn, built_id)
+    assert db.delete_shopping_item(conn, manual_id)
+    assert shopping(conn, menu_id) == [("Ориз", 200, "г", 0, 0)]
+
+    db.delete_menu(conn, menu_id)
+    assert conn.execute("SELECT COUNT(*) FROM shopping_items").fetchone()[0] == 0

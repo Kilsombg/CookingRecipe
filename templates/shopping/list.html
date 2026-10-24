@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text, form_errors_notice %}
+
+{% block title %}{{ t("shopping.title") }} · {{ menu.name }} · CookingRecipe{% endblock %}
+
+{# The tick is saved by app.js; an item added by hand can also be removed. #}
+{% macro shopping_item(item) %}
+  <li>
+    <label>
+      <input type="checkbox" {% if item.checked %}checked{% endif %}
+             data-toggle-url="{{ url_for('shopping.toggle_item', item_id=item.id) }}">
+      <span>{{ item.name }}
+        {%- set amount = [item.quantity|num, item.unit]|select|join(" ") %}
+        {%- if amount %} <small>{{ amount }}</small>{% endif %}</span>
+    </label>
+    {% if item.is_manual %}
+      <form method="post" action="{{ url_for('shopping.delete_item', item_id=item.id) }}" class="no-print">
+        <button type="submit" class="secondary outline"
+                aria-label="{{ t('shopping.remove_item') }}" title="{{ t('shopping.remove_item') }}">×</button>
+      </form>
+    {% endif %}
+  </li>
+{% endmacro %}
+
+{% block content %}
+<p class="no-print"><a href="{{ url_for('menus.detail', menu_id=menu.id) }}">← {{ menu.name }}</a></p>
+
+<div class="page-head">
+  <hgroup>
+    <h1>{{ t("shopping.title") }}</h1>
+    <p>{{ menu.name }}</p>
+  </hgroup>
+  <button type="button" class="secondary no-print" data-print>{{ t("shopping.print") }}</button>
+</div>
+{{ form_errors_notice(item_errors) }}
+
+<div data-toggle-error="{{ t('shopping.error_save_tick') }}">
+  {% if built %}
+    <ul class="shopping-list">
+      {% for item in built %}{{ shopping_item(item) }}{% endfor %}
+    </ul>
+  {% else %}
+    <p>{{ t("shopping.empty") }}</p>
+  {% endif %}
+
+  {% if manual %}
+    <h2>{{ t("shopping.manual_heading") }}</h2>
+    <ul class="shopping-list">
+      {% for item in manual %}{{ shopping_item(item) }}{% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+<div class="no-print">
+  <h2>{{ t("shopping.add_item") }}</h2>
+  <form method="post" action="{{ url_for('shopping.add_item') }}">
+    <input type="hidden" name="menu_id" value="{{ menu.id }}">
+    <div class="grid">
+      <label>
+        {{ t("label.name") }}
+        <input name="name" value="{{ item_form.name }}" required
+               placeholder="{{ t('shopping.item_placeholder') }}" {{ invalid(item_errors.name) }}>
+        {{ error_text(item_errors.name) }}
+      </label>
+      <label>
+        {{ t("label.quantity") }}
+        <input name="quantity" value="{{ item_form.quantity }}" inputmode="decimal" {{ invalid(item_errors.quantity) }}>
+        {{ error_text(item_errors.quantity) }}
+      </label>
+      <label>
+        {{ t("label.unit") }}
+        <input name="unit" value="{{ item_form.unit }}" list="unit-names">
+      </label>
+    </div>
+    <datalist id="unit-names">
+      {% for name in unit_names %}<option value="{{ name }}">{% endfor %}
+    </datalist>
+    <button type="submit">{{ t("shopping.add") }}</button>
+  </form>
+
+  <hr>
+
+  <form method="post" action="{{ url_for('shopping.regenerate', menu_id=menu.id) }}">
+    <button type="submit" class="secondary">{{ t("shopping.rebuild") }}</button>
+    <small class="help">{{ t("shopping.rebuild_help") }}</small>
+  </form>
+</div>
+{% endblock %}

@@ -396,3 +396,57 @@ def delete_menu_item(conn, menu_id, item_id):
     with conn:
         return conn.execute("DELETE FROM menu_items WHERE id = ? AND menu_id = ?",
                             (item_id, menu_id)).rowcount > 0
+
+
+# --- Shopping list ---
+# Names and units are copied in as text, so editing an ingredient later doesn't change the list.
+
+def get_shopping_items(conn, menu_id):
+    """The menu's list: the items built from the menu in their saved order, then those added by hand."""
+    return conn.execute(
+        """SELECT id, name, quantity, unit, checked, is_manual FROM shopping_items
+           WHERE menu_id = ? ORDER BY is_manual, id""", (menu_id,)).fetchall()
+
+
+def has_built_shopping_items(conn, menu_id):
+    return conn.execute("SELECT 1 FROM shopping_items WHERE menu_id = ? AND is_manual = 0",
+                        (menu_id,)).fetchone() is not None
+
+
+def replace_shopping_items(conn, menu_id, items):
+    """Replace the items built from the menu with `items` ({"name", "quantity", "unit"}); items added
+    by hand are kept. An item that is exactly as before keeps its tick."""
+    with conn:
+        ticked = {(r["name"], r["quantity"], r["unit"]) for r in conn.execute(
+            "SELECT name, quantity, unit FROM shopping_items WHERE menu_id = ? AND is_manual = 0 AND checked = 1",
+            (menu_id,))}
+        conn.execute("DELETE FROM shopping_items WHERE menu_id = ? AND is_manual = 0", (menu_id,))
+        conn.executemany(
+            "INSERT INTO shopping_items (menu_id, name, quantity, unit, checked) VALUES (?, ?, ?, ?, ?)",
+            [(menu_id, i["name"], i["quantity"], i["unit"], (i["name"], i["quantity"], i["unit"]) in ticked)
+             for i in items])
+
+
+def get_shopping_item(conn, item_id):
+    return conn.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,)).fetchone()
+
+
+def add_shopping_item(conn, menu_id, item):
+    """An item added by hand: `item` has name, quantity and unit (both may be None)."""
+    with conn:
+        return conn.execute(
+            """INSERT INTO shopping_items (menu_id, name, quantity, unit, is_manual)
+               VALUES (:menu_id, :name, :quantity, :unit, 1)""", {**item, "menu_id": menu_id}).lastrowid
+
+
+def set_shopping_item_checked(conn, item_id, checked):
+    """Returns False when there is no such item."""
+    with conn:
+        return conn.execute("UPDATE shopping_items SET checked = ? WHERE id = ?",
+                            (int(checked), item_id)).rowcount > 0
+
+
+def delete_shopping_item(conn, item_id):
+    """Only items added by hand can be deleted (the others come back on rebuild). Returns False otherwise."""
+    with conn:
+        return conn.execute("DELETE FROM shopping_items WHERE id = ? AND is_manual = 1", (item_id,)).rowcount > 0

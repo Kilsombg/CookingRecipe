@@ -52,10 +52,10 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] Macro totals per day and for the whole menu
 
 ## M7 — Shopping list
-- [ ] `services/shopping_list.py` with tests (merging by ingredient + unit, scaling, NULL quantities)
-- [ ] Build the list from a menu and save it in `shopping_items`
-- [ ] Tick items off (JS + POST), add items by hand, regenerate
-- [ ] Print styles
+- [x] `services/shopping_list.py` with tests (merging by ingredient + unit, scaling, NULL quantities)
+- [x] Build the list from a menu and save it in `shopping_items`
+- [x] Tick items off (JS + POST), add items by hand, regenerate
+- [x] Print styles
 
 ## M8 — Units page
 - [ ] View, rename and add units

@@ -394,3 +394,65 @@ def test_invalid_menu_item_and_remove_item(app, client):
     assert client.post(f"/menus/{other_menu}/items/{item_id}/delete").status_code == 404
     client.post(f"/menus/{menu_id}/items/{item_id}/delete")
     assert query(app, db.get_menu_items, menu_id) == []
+
+
+@pytest.mark.parametrize("lang", ["en", "bg"])
+def test_shopping_list_is_built_from_the_menu(app, client, lang):
+    client.set_cookie("lang", lang)
+    # 0,5 кг chicken and salt to taste, for 2 servings; cooked for 2 and for 1 servings
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client)
+    for servings in ("", "1"):
+        client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "", "meal": "", "servings": servings})
+    assert f"/menus/{menu_id}/shopping" in client.get(f"/menus/{menu_id}").get_data(as_text=True)
+
+    page = client.get(f"/menus/{menu_id}/shopping").get_data(as_text=True)
+    amount = "0,75 кг" if lang == "bg" else "0.75 кг"
+    assert f"Пилешко филе <small>{amount}</small>" in page
+    assert "Сол</span>" in page
+    assert [(i["name"], i["quantity"], i["unit"]) for i in query(app, db.get_shopping_items, menu_id)] == [
+        ("Пилешко филе", 0.75, "кг"), ("Сол", None, None)]
+
+
+def test_shopping_list_ticks_manual_items_and_rebuild(app, client):
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client)
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "", "meal": "", "servings": ""})
+    client.get(f"/menus/{menu_id}/shopping")
+    chicken, salt = query(app, db.get_shopping_items, menu_id)
+
+    assert client.post(f"/shopping/items/{chicken['id']}/toggle", data={"checked": "1"}).status_code == 204
+    assert client.post("/shopping/items/999/toggle", data={"checked": "1"}).status_code == 404
+    assert query(app, db.get_shopping_item, chicken["id"])["checked"] == 1
+
+    response = client.post("/shopping/items", data={"menu_id": menu_id, "name": "", "quantity": "0", "unit": ""})
+    assert response.status_code == 400
+    assert "Enter a number greater than 0." in response.get_data(as_text=True)
+    assert client.post("/shopping/items", data={"menu_id": 999, "name": "Мляко"}).status_code == 404
+    response = client.post("/shopping/items", data={"menu_id": menu_id, "name": "Мляко", "quantity": "1", "unit": "л"})
+    assert response.headers["Location"] == f"/menus/{menu_id}/shopping"
+    page = client.get(f"/menus/{menu_id}/shopping").get_data(as_text=True)
+    assert "Мляко <small>1 л</small>" in page and "Added by hand" in page
+
+    # Doubling the servings changes the chicken (so its tick goes); the milk stays
+    item_id = query(app, db.get_menu_items, menu_id)[0]["id"]
+    client.post(f"/menus/{menu_id}/items/{item_id}/delete")
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "", "meal": "", "servings": "4"})
+    assert query(app, db.get_shopping_items, menu_id)[0]["quantity"] == 0.5  # not rebuilt by itself
+    client.post(f"/menus/{menu_id}/shopping/regenerate")
+    items = query(app, db.get_shopping_items, menu_id)
+    assert [(i["name"], i["quantity"], i["checked"]) for i in items] == [
+        ("Пилешко филе", 1, 0), ("Сол", None, 0), ("Мляко", 1, 0)]
+
+    assert client.post(f"/shopping/items/{items[0]['id']}/delete").status_code == 404
+    client.post(f"/shopping/items/{items[2]['id']}/delete")
+    assert len(query(app, db.get_shopping_items, menu_id)) == 2
+    assert client.get("/menus/999/shopping").status_code == 404
+
+
+def test_shopping_list_of_an_empty_menu(client):
+    menu_id = create_menu(client)
+    page = client.get(f"/menus/{menu_id}/shopping").get_data(as_text=True)
+    assert "Nothing to buy yet." in page
