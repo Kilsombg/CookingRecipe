@@ -1,7 +1,7 @@
 import pytest
 
-from services.forms import (clean_name, format_number, parse_ingredient, parse_number, parse_recipe,
-                            parse_source_url, parse_tags, url_host)
+from services.forms import (clean_name, format_number, parse_ingredient, parse_menu_item, parse_menu_name,
+                            parse_number, parse_recipe, parse_source_url, parse_tags, url_host)
 
 UNIT_IDS = {1, 8}  # г, бр.
 
@@ -171,3 +171,40 @@ def test_protein_carbs_fat_cannot_exceed_100g():
     assert errors == {"macros": "ingredients.error_macros_over_100"}
     _, _, errors = parse_ingredient(ingredient_fields(protein_100g="33.3", carbs_100g="33.3", fat_100g="33.4"))
     assert errors == {}
+
+
+def test_parse_menu_name():
+    assert parse_menu_name("  Седмица   12 ноември ") == ("Седмица 12 ноември", None)
+    assert parse_menu_name("  ") == (None, "error.required")
+
+
+RECIPE_SERVINGS = {5: 4}
+
+
+def menu_fields(**overrides):
+    return {"recipe_id": "5", "day": "0", "meal": "lunch", "servings": "1,5"} | overrides
+
+
+def test_valid_menu_item():
+    assert parse_menu_item(menu_fields(), RECIPE_SERVINGS) == (
+        {"recipe_id": 5, "day": 0, "meal": "lunch", "servings": 1.5}, {})
+
+
+def test_menu_item_day_and_meal_are_optional_and_servings_default_to_the_recipe():
+    item, errors = parse_menu_item(menu_fields(day="", meal="", servings=""), RECIPE_SERVINGS)
+    assert errors == {}
+    assert item == {"recipe_id": 5, "day": None, "meal": None, "servings": 4}
+
+
+@pytest.mark.parametrize("field, value, error", [
+    ("recipe_id", "", "menus.error_choose_recipe"),
+    ("recipe_id", "99", "menus.error_choose_recipe"),
+    ("day", "7", "menus.error_choose_from_list"),
+    ("day", "-1", "menus.error_choose_from_list"),
+    ("meal", "brunch", "menus.error_choose_from_list"),
+    ("servings", "0", "error.positive_number"),
+    ("servings", "много", "error.number"),
+])
+def test_bad_menu_item_fields(field, value, error):
+    _, errors = parse_menu_item(menu_fields(**{field: value}), RECIPE_SERVINGS)
+    assert errors == {field: error}

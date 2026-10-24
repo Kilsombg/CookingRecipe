@@ -226,3 +226,63 @@ td.num {
     grid-column: 1 / -1;
   }
 }
+
+/* A text input with its button on the same line: new menu, rename menu */
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: calc(var(--pico-spacing) * 0.25);
+}
+
+.inline-form > input,
+.inline-form > button {
+  margin: 0;
+}
+
+.inline-form > button {
+  width: auto;
+  white-space: nowrap;
+}
+
+.inline-form + small {
+  color: var(--pico-del-color);
+}
+
+/* Menus: list of menus, and the recipes of a day / meal with a remove button */
+.menu-list li,
+.menu-items li {
+  list-style: none;
+}
+
+.menu-list small,
+.menu-items small {
+  margin-left: 0.5rem;
+  color: var(--pico-muted-color);
+}
+
+.menu-items li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.menu-items form {
+  margin: 0 0 0 auto;
+}
+
+.menu-items button {
+  width: auto;
+  margin: 0;
+  padding: 0.1rem 0.6rem;
+}
+
+.meal-heading {
+  margin: var(--pico-spacing) 0 0.5rem;
+  font-size: 1rem;
+  color: var(--pico-muted-color);
+}
+
+.menu-macros tfoot th,
+.menu-macros tfoot td {
+  font-weight: bold;
+}

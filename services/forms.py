@@ -13,6 +13,9 @@ ROW_FIELDS = ("name", "quantity", "unit", "note")
 INGREDIENT_FIELDS = ("name", "calories_100g", "protein_100g", "carbs_100g", "fat_100g", "grams_per_piece")
 INGREDIENT_VALUE_FIELDS = INGREDIENT_FIELDS[1:]
 GRAM_MACRO_FIELDS = ("protein_100g", "carbs_100g", "fat_100g")
+MENU_ITEM_FIELDS = ("recipe_id", "day", "meal", "servings")
+DAYS = range(7)  # 0 = Monday … 6 = Sunday, as stored in menu_items.day
+MEALS = ("breakfast", "lunch", "dinner", "snack")  # stored in English, shown translated
 
 
 def clean_text(s):
@@ -200,3 +203,43 @@ def parse_ingredient(fields):
         errors["macros"] = "ingredients.error_macros_over_100"
 
     return name, values, errors
+
+
+def parse_menu_name(raw):
+    """Return (name, error_key) for the menu name, which is required."""
+    name = clean_name(raw)
+    return name, None if name else "error.required"
+
+
+def parse_menu_item(fields, recipe_servings):
+    """Validate the "add a recipe to the menu" form.
+
+    fields: raw strings keyed by MENU_ITEM_FIELDS. Day and meal are optional.
+    recipe_servings: {recipe_id: servings} of every recipe; empty servings means the recipe's own.
+    Returns (item, errors), with errors keyed by field name.
+    """
+    errors = {}
+    raw_recipe = (fields.get("recipe_id") or "").strip()
+    recipe_id = int(raw_recipe) if raw_recipe.isdigit() else None
+    if recipe_id not in recipe_servings:
+        recipe_id = None
+        errors["recipe_id"] = "menus.error_choose_recipe"
+
+    raw_day = (fields.get("day") or "").strip()
+    day = int(raw_day) if raw_day.isdigit() else None
+    if raw_day and day not in DAYS:
+        day = None
+        errors["day"] = "menus.error_choose_from_list"
+
+    meal = (fields.get("meal") or "").strip() or None
+    if meal is not None and meal not in MEALS:
+        meal = None
+        errors["meal"] = "menus.error_choose_from_list"
+
+    servings, error = _decimal(fields.get("servings"), allow_zero=False)
+    if error:
+        errors["servings"] = error
+    elif servings is None and recipe_id is not None:
+        servings = recipe_servings[recipe_id]
+
+    return {"recipe_id": recipe_id, "day": day, "meal": meal, "servings": servings}, errors

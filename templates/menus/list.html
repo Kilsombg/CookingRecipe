@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text %}
+
+{% block title %}{{ t("menus.title") }} · CookingRecipe{% endblock %}
+
+{% block content %}
+<h1>{{ t("menus.title") }}</h1>
+
+<form method="post" action="{{ url_for('menus.create') }}">
+  <label>
+    {{ t("menus.new") }}
+    <span class="inline-form">
+      <input name="name" value="{{ name }}" required placeholder="{{ t('menus.name_placeholder') }}"
+             {{ invalid(error) }}>
+      <button type="submit">{{ t("menus.create") }}</button>
+    </span>
+    {{ error_text(error) }}
+  </label>
+</form>
+
+{% if menus %}
+  <ul class="menu-list">
+    {% for menu in menus %}
+      <li>
+        <a href="{{ url_for('menus.detail', menu_id=menu.id) }}">{{ menu.name }}</a>
+        <small>{{ t("menus.recipe_count", n=menu.item_count) }}</small>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>{{ t("menus.empty") }}</p>
+{% endif %}
+{% endblock %}

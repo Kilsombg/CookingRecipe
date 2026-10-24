@@ -33,7 +33,7 @@ def recipe_form(**overrides):
 
 
 @pytest.mark.parametrize("lang", ["en", "bg"])
-@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/ingredients", "/ingredients/new"])
+@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/ingredients", "/ingredients/new", "/menus"])
 def test_pages_render(client, url, lang):
     client.set_cookie("lang", lang)
     assert client.get(url).status_code == 200
@@ -307,3 +307,90 @@ def test_search_recipes(client):
     assert "Омлет" in page and "Пиле с ориз" in page
     page = client.get("/recipes?q=торта").get_data(as_text=True)
     assert "Няма намерени рецепти." in page
+
+
+def create_menu(client, name="Седмица 12 ноември"):
+    response = client.post("/menus", data={"name": name})
+    assert response.status_code == 302
+    return int(response.headers["Location"].rsplit("/", 1)[1])
+
+
+def test_create_rename_and_delete_menu(app, client):
+    client.set_cookie("lang", "bg")
+    assert client.post("/menus", data={"name": "  "}).status_code == 400
+    menu_id = create_menu(client)
+    page = client.get(f"/menus/{menu_id}").get_data(as_text=True)
+    assert "Менюто „Седмица 12 ноември“ е създадено." in page
+    assert "Седмица 12 ноември" in client.get("/menus").get_data(as_text=True)
+
+    assert client.post(f"/menus/{menu_id}", data={"name": ""}).status_code == 400
+    client.post(f"/menus/{menu_id}", data={"name": "Рожден ден"})
+    assert query(app, db.get_menu, menu_id)["name"] == "Рожден ден"
+
+    client.post(f"/menus/{menu_id}/delete")
+    assert client.get(f"/menus/{menu_id}").status_code == 404
+    assert query(app, db.list_menus) == []
+
+
+@pytest.mark.parametrize("lang", ["en", "bg"])
+def test_menu_grouped_by_day_and_meal_with_macros(app, client, lang):
+    client.set_cookie("lang", lang)
+    # 0,5 кг chicken (110 kcal / 100 g) for 2 servings = 275 kcal per serving
+    client.post("/ingredients", data=ingredient_form())
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client)
+
+    response = client.post(f"/menus/{menu_id}/items",
+                           data={"recipe_id": recipe_id, "day": "2", "meal": "dinner", "servings": ""})
+    assert response.headers["Location"] == f"/menus/{menu_id}?day=2&meal=dinner"
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "0", "meal": "lunch", "servings": "1"})
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "0", "meal": "", "servings": "1"})
+
+    page = client.get(f"/menus/{menu_id}?day=2&meal=dinner").get_data(as_text=True)
+    items = page.split("<h2>")[1:3]   # Monday, then Wednesday, before the macros
+    if lang == "bg":
+        assert items[0].startswith("Понеделник") and items[1].startswith("Сряда")
+        assert items[0].index("Обяд") < items[0].index("Друго")
+        assert "Вечеря" in items[1]
+    else:
+        assert items[0].startswith("Monday") and items[1].startswith("Wednesday")
+        assert items[0].index("Lunch") < items[0].index("Other")
+        assert "Dinner" in items[1]
+    assert '<option value="2" selected>' in page and '<option value="dinner" selected>' in page
+    kcal = "ккал" if lang == "bg" else "kcal"
+    assert f"550 {kcal}" in page    # Monday: 2 × 275, and Wednesday: the recipe's 2 servings
+    assert f"1100 {kcal}" in page   # whole menu
+    assert "macros-incomplete" not in page  # the salt has no quantity, so it doesn't count as missing
+
+
+def test_menu_without_days_is_a_plain_list(app, client):
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client, "Рожден ден")
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "", "meal": "", "servings": "6"})
+    page = client.get(f"/menus/{menu_id}").get_data(as_text=True)
+    assert "No specific day" not in page.split("<h2>Add a recipe</h2>")[0]
+    assert "6 servings" in page
+    # The recipe has no macro data, so it is listed as incomplete
+    assert "these recipes have ingredients with missing data" in page
+
+
+def test_invalid_menu_item_and_remove_item(app, client):
+    client.post("/recipes", data=recipe_form())
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    menu_id = create_menu(client)
+    response = client.post(f"/menus/{menu_id}/items",
+                           data={"recipe_id": recipe_id, "day": "0", "meal": "lunch", "servings": "0"})
+    assert response.status_code == 400
+    page = response.get_data(as_text=True)
+    assert "Enter a number greater than 0." in page
+    assert '<option value="lunch" selected>' in page
+    assert query(app, db.get_menu_items, menu_id) == []
+
+    client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "0", "meal": "lunch", "servings": "1"})
+    item_id = query(app, db.get_menu_items, menu_id)[0]["id"]
+    other_menu = create_menu(client, "Друго")
+    assert client.post(f"/menus/{other_menu}/items/{item_id}/delete").status_code == 404
+    client.post(f"/menus/{menu_id}/items/{item_id}/delete")
+    assert query(app, db.get_menu_items, menu_id) == []

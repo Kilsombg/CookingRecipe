@@ -17,7 +17,7 @@
       <ul>
         <li><a href="{{ url_for('recipes.index') }}">{{ t("nav.recipes") }}</a></li>
         <li><a href="{{ url_for('ingredients.index') }}">{{ t("nav.ingredients") }}</a></li>
-        <li><a href="/menus">{{ t("nav.menus") }}</a></li>
+        <li><a href="{{ url_for('menus.index') }}">{{ t("nav.menus") }}</a></li>
         <li>
           <form method="post" action="{{ url_for('i18n.set_language') }}" class="lang-switch"
                 aria-label="{{ t('nav.language') }}">

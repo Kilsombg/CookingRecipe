@@ -189,3 +189,35 @@ def test_lines_carry_macro_data(conn):
     grouped = db.lines_by_recipe(conn)
     assert [r["name"] for r in grouped[first]] == ["Яйца", "Сол"]
     assert [r["quantity"] for r in grouped[second]] == [3]
+
+
+def test_menus_and_items(conn):
+    recipe_id = db.create_recipe(conn, recipe(), [line("Ориз")])
+    first = db.create_menu(conn, "Седмица 12 ноември")
+    second = db.create_menu(conn, "Рожден ден")
+    db.add_menu_item(conn, first, {"recipe_id": recipe_id, "day": 0, "meal": "lunch", "servings": 2})
+    db.add_menu_item(conn, first, {"recipe_id": recipe_id, "day": None, "meal": None, "servings": 1.5})
+
+    assert [(m["name"], m["item_count"]) for m in db.list_menus(conn)] == [
+        ("Рожден ден", 0), ("Седмица 12 ноември", 2)]
+    items = db.get_menu_items(conn, first)
+    assert [(i["title"], i["recipe_servings"], i["day"], i["meal"], i["servings"]) for i in items] == [
+        ("Пиле с ориз", 2, 0, "lunch", 2), ("Пиле с ориз", 2, None, None, 1.5)]
+
+    assert not db.delete_menu_item(conn, second, items[0]["id"])  # not an item of that menu
+    assert db.delete_menu_item(conn, first, items[0]["id"])
+    db.rename_menu(conn, first, "Седмица 19 ноември")
+    assert db.get_menu(conn, first)["name"] == "Седмица 19 ноември"
+
+
+def test_deleting_a_recipe_or_menu_removes_its_items(conn):
+    recipe_id = db.create_recipe(conn, recipe(), [line("Ориз")])
+    menu_id = db.create_menu(conn, "Седмица")
+    db.add_menu_item(conn, menu_id, {"recipe_id": recipe_id, "day": 0, "meal": None, "servings": 1})
+    db.delete_recipe(conn, recipe_id)
+    assert db.get_menu_items(conn, menu_id) == []
+
+    db.add_menu_item(conn, menu_id, {"recipe_id": db.create_recipe(conn, recipe(), [line("Ориз")]),
+                                     "day": 0, "meal": None, "servings": 1})
+    db.delete_menu(conn, menu_id)
+    assert conn.execute("SELECT COUNT(*) FROM menu_items").fetchone()[0] == 0

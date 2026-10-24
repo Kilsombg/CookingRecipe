@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text, macro_value, form_errors_notice %}
+
+{% block title %}{{ menu.name }} · CookingRecipe{% endblock %}
+
+{% macro day_label(day) %}{{ t("day." ~ day) if day is not none else t("menus.no_day") }}{% endmacro %}
+
+{# Days are shown only when at least one entry has one, so a menu without days is a plain list. #}
+{% set show_days = groups|length > 1 or (groups and groups[0][0] is not none) %}
+
+{% block content %}
+<p><a href="{{ url_for('menus.index') }}">← {{ t("menus.back") }}</a></p>
+
+<h1>{{ menu.name }}</h1>
+{{ form_errors_notice(item_errors or name_error) }}
+
+{% for day, meals in groups %}
+  {% if show_days %}<h2>{{ day_label(day) }}</h2>{% endif %}
+  {% for meal, items in meals %}
+    {% if meal is not none or meals|length > 1 %}
+      <h3 class="meal-heading">{{ t("meal." ~ meal) if meal is not none else t("menus.no_meal") }}</h3>
+    {% endif %}
+    <ul class="menu-items">
+      {% for item in items %}
+        <li>
+          <a href="{{ url_for('recipes.detail', recipe_id=item.recipe_id) }}">{{ item.title }}</a>
+          <small>{{ t("menus.item_servings", n=item.servings|num) }}</small>
+          <form method="post" action="{{ url_for('menus.delete_item', menu_id=menu.id, item_id=item.id) }}">
+            <button type="submit" class="secondary outline"
+                    aria-label="{{ t('menus.remove_item') }}" title="{{ t('menus.remove_item') }}">×</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+{% else %}
+  <p>{{ t("menus.no_items") }}</p>
+{% endfor %}
+
+{% if macros.incomplete or macros.total.values()|reject("none")|list %}
+  <h2>{{ t("macros.title") }}</h2>
+  <figure class="table-scroll">
+    <table class="menu-macros">
+      <thead>
+        <tr>
+          <th></th>
+          {% for macro in macro_names %}<th class="num">{{ t("label." ~ macro) }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if show_days %}
+          {% for day, _ in groups %}
+            <tr>
+              <th scope="row">{{ day_label(day) }}</th>
+              {% for macro in macro_names %}
+                <td class="num">{{ macro_value(macro, macros.days[day][macro]) }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">{{ t("menus.macros_total") }}</th>
+          {% for macro in macro_names %}
+            <td class="num">{{ macro_value(macro, macros.total[macro]) }}</td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+    </table>
+  </figure>
+  {% if macros.incomplete %}
+    <div class="flash flash-error macros-incomplete">
+      <p>{{ t("menus.macros_incomplete") }}</p>
+      <ul>
+        {% for recipe in macros.incomplete %}
+          <li><a href="{{ url_for('recipes.detail', recipe_id=recipe.recipe_id) }}">{{ recipe.title }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endif %}
+
+<h2>{{ t("menus.add_item") }}</h2>
+{% if recipes %}
+  <form method="post" action="{{ url_for('menus.add_item', menu_id=menu.id) }}">
+    <div class="grid">
+      <label>
+        {{ t("menus.recipe") }}
+        <select name="recipe_id" required {{ invalid(item_errors.recipe_id) }}>
+          <option value="">—</option>
+          {% for recipe in recipes %}
+            <option value="{{ recipe.id }}" {% if item_form.recipe_id == recipe.id|string %}selected{% endif %}>{{ recipe.title }}</option>
+          {% endfor %}
+        </select>
+        {{ error_text(item_errors.recipe_id) }}
+      </label>
+      <label>
+        {{ t("menus.day") }}
+        <select name="day" {{ invalid(item_errors.day) }}>
+          <option value="">{{ t("menus.no_day") }}</option>
+          {% for day in days %}
+            <option value="{{ day }}" {% if item_form.day == day|string %}selected{% endif %}>{{ t("day." ~ day) }}</option>
+          {% endfor %}
+        </select>
+        {{ error_text(item_errors.day) }}
+      </label>
+      <label>
+        {{ t("menus.meal") }}
+        <select name="meal" {{ invalid(item_errors.meal) }}>
+          <option value="">—</option>
+          {% for meal in meals %}
+            <option value="{{ meal }}" {% if item_form.meal == meal %}selected{% endif %}>{{ t("meal." ~ meal) }}</option>
+          {% endfor %}
+        </select>
+        {{ error_text(item_errors.meal) }}
+      </label>
+      <label>
+        {{ t("label.servings") }}
+        <input name="servings" value="{{ item_form.servings }}" inputmode="decimal" {{ invalid(item_errors.servings) }}>
+        {% if item_errors.servings %}{{ error_text(item_errors.servings) }}
+        {% else %}<small>{{ t("menus.servings_help") }}</small>{% endif %}
+      </label>
+    </div>
+    <button type="submit">{{ t("menus.add") }}</button>
+  </form>
+{% else %}
+  <p>{{ t("menus.no_recipes") }} <a href="{{ url_for('recipes.new') }}">{{ t("recipes.new") }}</a></p>
+{% endif %}
+
+<hr>
+
+<form method="post" action="{{ url_for('menus.rename', menu_id=menu.id) }}">
+  <label>
+    {{ t("menus.rename") }}
+    <span class="inline-form">
+      <input name="name" value="{{ name }}" required {{ invalid(name_error) }}>
+      <button type="submit" class="secondary">{{ t("btn.save") }}</button>
+    </span>
+    {{ error_text(name_error) }}
+  </label>
+</form>
+
+<form method="post" action="{{ url_for('menus.delete', menu_id=menu.id) }}" data-confirm="{{ t('menus.confirm_delete') }}">
+  <button type="submit" class="secondary">{{ t("menus.delete") }}</button>
+</form>
+{% endblock %}

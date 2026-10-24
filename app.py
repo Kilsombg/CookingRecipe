@@ -5,7 +5,7 @@ from flask import Flask, redirect, render_template, send_from_directory, url_for
 import config
 import db
 import i18n
-from routes import ingredients, recipes
+from routes import ingredients, menus, recipes
 from services.forms import url_host
 from services.macros import MACROS
 
@@ -33,6 +33,7 @@ def create_app(overrides=None):
     app.jinja_env.filters["host"] = url_host
     app.register_blueprint(recipes.bp)
     app.register_blueprint(ingredients.bp)
+    app.register_blueprint(menus.bp)
 
     @app.get("/")
     def index():

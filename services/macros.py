@@ -1,4 +1,4 @@
-"""Macro calculations: ingredient lines in, grams and macro totals out.
+"""Macro calculations: ingredient lines in, grams and macro totals out (per recipe and per menu).
 
 A line is a mapping with: ingredient_id, name, quantity, unit_grams, grams_per_piece,
 and <macro>_100g for every macro. None means "not known", as NULL does in the database.
@@ -50,3 +50,28 @@ def recipe_macros(lines, servings):
 
     per_serving = {macro: None if value is None else value / servings for macro, value in total.items()}
     return {"total": total, "per_serving": per_serving, "incomplete": list(incomplete.values())}
+
+
+def menu_macros(items, lines_by_recipe):
+    """Macros of a menu: each item's recipe per-serving macros × the item's servings.
+
+    items: menu entries with recipe_id, title, recipe_servings, day and servings.
+    lines_by_recipe: {recipe_id: [ingredient lines]}.
+    Returns {"total": {macro: value}, "days": {day: {macro: value}}, "incomplete": [...]}, where
+    "days" has a key for every day used, None for items without a day. Each incomplete entry is
+    {"recipe_id", "title"}: a recipe with ingredients missing data, so the totals are partial.
+    """
+    total = dict.fromkeys(MACROS)
+    days = {}
+    incomplete = {}
+    for item in items:
+        recipe = recipe_macros(lines_by_recipe.get(item["recipe_id"], []), item["recipe_servings"])
+        day = days.setdefault(item["day"], dict.fromkeys(MACROS))
+        for macro, per_serving in recipe["per_serving"].items():
+            if per_serving is not None:
+                amount = per_serving * item["servings"]
+                total[macro] = (total[macro] or 0) + amount
+                day[macro] = (day[macro] or 0) + amount
+        if recipe["incomplete"]:
+            incomplete.setdefault(item["recipe_id"], {"recipe_id": item["recipe_id"], "title": item["title"]})
+    return {"total": total, "days": days, "incomplete": list(incomplete.values())}

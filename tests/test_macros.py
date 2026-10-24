@@ -1,6 +1,6 @@
 import pytest
 
-from services.macros import line_grams, recipe_macros
+from services.macros import line_grams, menu_macros, recipe_macros
 
 # Grams of the starting units (see migrations/0001_initial.sql); None = a piece unit (бр.)
 G, KG, ML, TBSP, CUP, PIECE = 1, 1000, 1, 15, 200, None
@@ -99,3 +99,39 @@ def test_no_lines():
     result = recipe_macros([], servings=1)
     assert result["total"] == {"calories": None, "protein": None, "carbs": None, "fat": None}
     assert result["incomplete"] == []
+
+
+def menu_item(recipe_id, day, servings, recipe_servings=2, title="Пиле с ориз"):
+    return {"recipe_id": recipe_id, "title": title, "recipe_servings": recipe_servings,
+            "day": day, "servings": servings}
+
+
+def test_menu_macros_per_day_and_total():
+    # Recipe 1: 400 г chicken for 2 servings = 220 kcal per serving
+    lines = {1: [line(CHICKEN, 400, G)]}
+    result = menu_macros([menu_item(1, 0, 2), menu_item(1, 0, 1), menu_item(1, 3, 0.5)], lines)
+    assert result["days"][0]["calories"] == pytest.approx(660)
+    assert result["days"][3]["calories"] == pytest.approx(110)
+    assert result["total"]["calories"] == pytest.approx(770)
+    assert result["total"]["protein"] == pytest.approx(3.5 * 46)
+    assert result["incomplete"] == []
+
+
+def test_menu_items_without_a_day():
+    result = menu_macros([menu_item(1, None, 1)], {1: [line(CHICKEN, 400, G)]})
+    assert list(result["days"]) == [None]
+    assert result["days"][None]["calories"] == pytest.approx(220)
+
+
+def test_menu_lists_incomplete_recipes_once():
+    lines = {1: [line(CHICKEN, 200, G)], 2: [line(CHICKEN, 200, G), line(OIL, 1, TBSP)]}
+    items = [menu_item(1, 0, 1), menu_item(2, 0, 1, title="Салата"), menu_item(2, 1, 1, title="Салата")]
+    result = menu_macros(items, lines)
+    assert result["incomplete"] == [{"recipe_id": 2, "title": "Салата"}]
+    assert result["total"]["calories"] == pytest.approx(3 * 110)  # the partial total is still counted
+
+
+def test_empty_menu():
+    result = menu_macros([], {})
+    assert result == {"total": {"calories": None, "protein": None, "carbs": None, "fat": None},
+                      "days": {}, "incomplete": []}

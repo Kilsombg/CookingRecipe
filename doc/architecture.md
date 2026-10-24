@@ -67,7 +67,7 @@ CookingRecipe/
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
-│   ├── menus/             # list.html, detail.html, form.html
+│   ├── menus/             # list.html (with the new-menu form), detail.html (add recipe, rename)
 │   └── shopping/          # list.html
 ├── static/
 │   ├── pico.min.css
@@ -109,7 +109,7 @@ CookingRecipe/
 | POST | `/units/<id>` | Rename a unit or change its grams |
 | GET | `/menus` | List of menus |
 | POST | `/menus` | Create a menu |
-| GET | `/menus/<id>` | Menu detail, grouped by day/meal, with macro totals |
+| GET | `/menus/<id>?day=&meal=` | Menu detail, grouped by day/meal, with macro totals. `day`/`meal` preselect the add-recipe form (set after adding a recipe) |
 | POST | `/menus/<id>` | Rename a menu |
 | POST | `/menus/<id>/delete` | Delete a menu |
 | POST | `/menus/<id>/items` | Add a recipe to a menu |

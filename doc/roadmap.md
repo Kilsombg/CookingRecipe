@@ -46,10 +46,10 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] Search by title or ingredient, ignoring Cyrillic upper/lower case
 
 ## M6 — Menus
-- [ ] Create, rename and delete menus
-- [ ] Add a recipe to a menu with day, meal and servings
-- [ ] Menu page grouped by day and meal
-- [ ] Macro totals per day and for the whole menu
+- [x] Create, rename and delete menus
+- [x] Add a recipe to a menu with day, meal and servings
+- [x] Menu page grouped by day and meal
+- [x] Macro totals per day and for the whole menu
 
 ## M7 — Shopping list
 - [ ] `services/shopping_list.py` with tests (merging by ingredient + unit, scaling, NULL quantities)

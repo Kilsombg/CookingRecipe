@@ -341,3 +341,58 @@ def tags_by_recipe(conn):
                ORDER BY casefold(t.name)"""):
         grouped[row["recipe_id"]].append(row)
     return grouped
+
+
+# --- Menus ---
+
+def list_menus(conn):
+    """Every menu, newest first, with how many recipes it has."""
+    return conn.execute(
+        """SELECT m.id, m.name, COUNT(mi.id) AS item_count
+           FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id
+           GROUP BY m.id ORDER BY m.id DESC""").fetchall()
+
+
+def get_menu(conn, menu_id):
+    return conn.execute("SELECT * FROM menus WHERE id = ?", (menu_id,)).fetchone()
+
+
+def create_menu(conn, name):
+    with conn:
+        return conn.execute("INSERT INTO menus (name) VALUES (?)", (name,)).lastrowid
+
+
+def rename_menu(conn, menu_id, name):
+    with conn:
+        conn.execute("UPDATE menus SET name = ? WHERE id = ?", (name, menu_id))
+
+
+def delete_menu(conn, menu_id):
+    """Its items and shopping list go with it."""
+    with conn:
+        conn.execute("DELETE FROM menus WHERE id = ?", (menu_id,))
+
+
+def get_menu_items(conn, menu_id):
+    """The menu's entries in the order they were added, with the recipe's title and servings."""
+    return conn.execute(
+        """SELECT mi.id, mi.recipe_id, mi.day, mi.meal, mi.servings,
+                  r.title, r.servings AS recipe_servings
+           FROM menu_items mi JOIN recipes r ON r.id = mi.recipe_id
+           WHERE mi.menu_id = ? ORDER BY mi.id""", (menu_id,)).fetchall()
+
+
+def add_menu_item(conn, menu_id, item):
+    """`item`: recipe_id, day (0 = Monday … 6, or None), meal (or None), servings."""
+    with conn:
+        return conn.execute(
+            """INSERT INTO menu_items (menu_id, recipe_id, day, meal, servings)
+               VALUES (:menu_id, :recipe_id, :day, :meal, :servings)""",
+            {**item, "menu_id": menu_id}).lastrowid
+
+
+def delete_menu_item(conn, menu_id, item_id):
+    """Returns False when the menu has no such item."""
+    with conn:
+        return conn.execute("DELETE FROM menu_items WHERE id = ? AND menu_id = ?",
+                            (item_id, menu_id)).rowcount > 0
