@@ -38,7 +38,7 @@ def num(x):
     return format_number(x, DECIMAL_SEPARATORS[get_lang()])
 
 
-def _safe_next(url):
+def safe_next(url):
     """Only allow redirects to a path on this site, never to another host."""
     if url and url.startswith("/") and not url.startswith("//") and "\\" not in url:
         return url
@@ -47,7 +47,7 @@ def _safe_next(url):
 
 @bp.post("/language")
 def set_language():
-    response = redirect(_safe_next(request.form.get("next")))
+    response = redirect(safe_next(request.form.get("next")))
     lang = request.form.get("lang")
     if lang in LANGUAGES:
         response.set_cookie(COOKIE_NAME, lang, max_age=COOKIE_MAX_AGE, httponly=True, samesite="Lax")

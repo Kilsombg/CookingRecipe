@@ -33,17 +33,17 @@ Each milestone ends with something you can actually use. Work through them in or
 **Done when:** you can type in your Notepad recipes, in Bulgarian, and stop using Notepad.
 
 ## M4 — Macros
-- [ ] `services/macros.py` with tests (grams conversion, missing data, per serving)
-- [ ] Macros per 100 g and grams per piece on the ingredient form
-- [ ] Total and per-serving macros on the recipe page, with a list of incomplete ingredients
-- [ ] Calories per serving on the recipe cards
-- [ ] "Missing macros" filter on the ingredients page
+- [x] `services/macros.py` with tests (grams conversion, missing data, per serving)
+- [x] Macros per 100 g and grams per piece on the ingredient form
+- [x] Total and per-serving macros on the recipe page, with a list of incomplete ingredients
+- [x] Calories per serving on the recipe cards
+- [x] "Missing macros" filter on the ingredients page
 
 ## M5 — Photos, links, tags, search
-- [ ] Photo upload with Pillow resize, plus a placeholder when there is no photo
-- [ ] Source link shown as a clickable link when present
-- [ ] Tags: add on the form, filter on the list
-- [ ] Search by title or ingredient, ignoring Cyrillic upper/lower case
+- [x] Photo upload with Pillow resize, plus a placeholder when there is no photo
+- [x] Source link shown as a clickable link when present
+- [x] Tags: add on the form, filter on the list
+- [x] Search by title or ingredient, ignoring Cyrillic upper/lower case
 
 ## M6 — Menus
 - [ ] Create, rename and delete menus

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
+<p class="flash flash-error" role="alert">{{ message }}</p>
+<p><a href="javascript:history.back()">← {{ t("btn.back") }}</a></p>
+{% endblock %}

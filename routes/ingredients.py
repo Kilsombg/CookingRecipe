@@ -1,10 +1,10 @@
-"""Ingredient catalogue: list, add, edit, delete."""
+"""Ingredient catalogue: list, add, edit (macros per 100 g, grams per piece), delete."""
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 import db
-from i18n import t
-from services.forms import clean_name
+from i18n import num, safe_next, t
+from services.forms import INGREDIENT_FIELDS, INGREDIENT_VALUE_FIELDS, parse_ingredient
 
 bp = Blueprint("ingredients", __name__, url_prefix="/ingredients")
 
@@ -17,27 +17,40 @@ def _load(ingredient_id):
 
 
 def _validate(conn, ingredient_id=None):
-    """Return (name, errors) from the submitted form."""
-    name = clean_name(request.form.get("name"))
-    if name is None:
-        return name, {"name": "error.required"}
-    existing = db.find_ingredient(conn, name)
-    if existing and existing["id"] != ingredient_id:
-        return name, {"name": "ingredients.error_exists"}
-    return name, {}
+    """Return (name, values, errors) from the submitted form."""
+    name, values, errors = parse_ingredient(request.form)
+    if name is not None:
+        existing = db.find_ingredient(conn, name)
+        if existing and existing["id"] != ingredient_id:
+            errors["name"] = "ingredients.error_exists"
+    return name, values, errors
+
+
+def _back_url():
+    """Where Save and Cancel go: the page that linked here (?next=, e.g. a recipe), or the list."""
+    next_url = request.values.get("next")
+    return safe_next(next_url) if next_url else url_for(".index")
 
 
 def _render_form(ingredient, errors, status=200):
     used_in = db.recipes_using_ingredient(db.get_db(), ingredient["id"]) if ingredient else []
-    form = {"name": request.form.get("name", ingredient["name"] if ingredient else "")}
-    return render_template("ingredients/form.html", ingredient=ingredient, form=form,
-                           errors=errors, used_in=used_in), status
+    if request.method == "POST":
+        form = {field: request.form.get(field, "") for field in INGREDIENT_FIELDS}
+    elif ingredient:
+        form = {"name": ingredient["name"]} | {field: num(ingredient[field]) for field in INGREDIENT_VALUE_FIELDS}
+    else:
+        form = dict.fromkeys(INGREDIENT_FIELDS, "")
+    return render_template("ingredients/form.html", ingredient=ingredient, form=form, errors=errors,
+                           used_in=used_in, next=request.values.get("next", ""),
+                           back_url=_back_url()), status
 
 
 @bp.get("")
 def index():
     q = request.args.get("q", "").strip()
-    return render_template("ingredients/list.html", ingredients=db.list_ingredients(db.get_db(), q), q=q)
+    missing = request.args.get("missing") == "1"
+    return render_template("ingredients/list.html", q=q, missing=missing,
+                           ingredients=db.list_ingredients(db.get_db(), q, missing))
 
 
 @bp.get("/new")
@@ -48,10 +61,10 @@ def new():
 @bp.post("")
 def create():
     conn = db.get_db()
-    name, errors = _validate(conn)
+    name, values, errors = _validate(conn)
     if errors:
         return _render_form(None, errors, 400)
-    db.create_ingredient(conn, name)
+    db.create_ingredient(conn, name, values)
     flash(t("ingredients.msg_created", name=name), "success")
     return redirect(url_for(".index"))
 
@@ -65,12 +78,12 @@ def edit(ingredient_id):
 def update(ingredient_id):
     ingredient = _load(ingredient_id)
     conn = db.get_db()
-    name, errors = _validate(conn, ingredient_id)
+    name, values, errors = _validate(conn, ingredient_id)
     if errors:
         return _render_form(ingredient, errors, 400)
-    db.update_ingredient(conn, ingredient_id, name)
+    db.update_ingredient(conn, ingredient_id, name, values)
     flash(t("ingredients.msg_updated", name=name), "success")
-    return redirect(url_for(".index"))
+    return redirect(_back_url())
 
 
 @bp.post("/<int:ingredient_id>/delete")

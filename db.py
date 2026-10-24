@@ -1,10 +1,12 @@
 import re
 import sqlite3
+from collections import defaultdict
 from datetime import datetime
 
 from flask import current_app, g
 
 import config
+from services.forms import INGREDIENT_VALUE_FIELDS
 from services.text import casefold, name_key
 
 MIGRATION_NAME = re.compile(r"^(\d{4})_\w+\.sql$")
@@ -116,15 +118,30 @@ def list_units(conn):
 
 # --- Ingredients ---
 
-def list_ingredients(conn, q=""):
-    """All ingredients (or those whose name contains `q`), with how many recipes use each."""
-    sql = """SELECT i.id, i.name, COUNT(DISTINCT ri.recipe_id) AS recipe_count
+# An ingredient whose data can't give macros: a macro is empty, or a recipe measures it
+# in a piece unit (units.grams IS NULL) while it has no grams per piece.
+_MISSING_DATA = """(i.calories_100g IS NULL OR i.protein_100g IS NULL
+                    OR i.carbs_100g IS NULL OR i.fat_100g IS NULL
+                    OR (i.grams_per_piece IS NULL AND EXISTS (
+                        SELECT 1 FROM recipe_ingredients pri JOIN units pu ON pu.id = pri.unit_id
+                        WHERE pri.ingredient_id = i.id AND pu.grams IS NULL)))"""
+
+
+def list_ingredients(conn, q="", missing=False):
+    """All ingredients (or those whose name contains `q`, or with missing data), with
+    their macros and how many recipes use each."""
+    sql = """SELECT i.id, i.name, i.calories_100g, i.protein_100g, i.carbs_100g, i.fat_100g,
+                    i.grams_per_piece, COUNT(DISTINCT ri.recipe_id) AS recipe_count
              FROM ingredients i
              LEFT JOIN recipe_ingredients ri ON ri.ingredient_id = i.id"""
-    params = []
+    conditions, params = [], []
     if q:
-        sql += " WHERE i.name_key LIKE ? ESCAPE '\\'"
+        conditions.append("i.name_key LIKE ? ESCAPE '\\'")
         params.append(_contains(q))
+    if missing:
+        conditions.append(_MISSING_DATA)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
     sql += " GROUP BY i.id ORDER BY casefold(i.name)"
     return conn.execute(sql, params).fetchall()
 
@@ -143,20 +160,34 @@ def find_ingredient(conn, name):
     return conn.execute("SELECT * FROM ingredients WHERE name_key = ?", (name_key(name),)).fetchone()
 
 
-def create_ingredient(conn, name):
+def create_ingredient(conn, name, values=None):
+    """`values`: macros per 100 g and grams per piece (see INGREDIENT_VALUE_FIELDS); missing ones stay NULL."""
     with conn:
-        return _insert_ingredient(conn, name)
+        return _insert_ingredient(conn, name, values)
 
 
-def _insert_ingredient(conn, name):
-    cur = conn.execute("INSERT INTO ingredients (name, name_key) VALUES (?, ?)", (name, name_key(name)))
+def _insert_ingredient(conn, name, values=None):
+    cur = conn.execute(
+        """INSERT INTO ingredients (name, name_key, calories_100g, protein_100g, carbs_100g, fat_100g,
+                                    grams_per_piece)
+           VALUES (:name, :name_key, :calories_100g, :protein_100g, :carbs_100g, :fat_100g, :grams_per_piece)""",
+        _ingredient_params(name, values))
     return cur.lastrowid
 
 
-def update_ingredient(conn, ingredient_id, name):
+def update_ingredient(conn, ingredient_id, name, values):
     with conn:
-        conn.execute("UPDATE ingredients SET name = ?, name_key = ? WHERE id = ?",
-                     (name, name_key(name), ingredient_id))
+        conn.execute(
+            """UPDATE ingredients
+               SET name = :name, name_key = :name_key, calories_100g = :calories_100g,
+                   protein_100g = :protein_100g, carbs_100g = :carbs_100g, fat_100g = :fat_100g,
+                   grams_per_piece = :grams_per_piece
+               WHERE id = :id""",
+            {**_ingredient_params(name, values), "id": ingredient_id})
+
+
+def _ingredient_params(name, values):
+    return {**dict.fromkeys(INGREDIENT_VALUE_FIELDS), **(values or {}), "name": name, "name_key": name_key(name)}
 
 
 def delete_ingredient(conn, ingredient_id):
@@ -175,55 +206,94 @@ def recipes_using_ingredient(conn, ingredient_id):
 
 # --- Recipes ---
 
-def list_recipes(conn):
-    return conn.execute(
-        """SELECT id, title, servings, prep_minutes, cook_minutes
-           FROM recipes ORDER BY casefold(title)""").fetchall()
+def list_recipes(conn, q="", tag_id=None):
+    """All recipes, or those whose title or an ingredient name contains `q` (ignoring case),
+    and/or that have the tag `tag_id`."""
+    sql = """SELECT r.id, r.title, r.photo_filename, r.servings, r.prep_minutes, r.cook_minutes
+             FROM recipes r"""
+    conditions, params = [], {}
+    if q:
+        conditions.append("""(casefold(r.title) LIKE :q ESCAPE '\\' OR EXISTS (
+                                 SELECT 1 FROM recipe_ingredients qri JOIN ingredients qi ON qi.id = qri.ingredient_id
+                                 WHERE qri.recipe_id = r.id AND qi.name_key LIKE :q ESCAPE '\\'))""")
+        params["q"] = _contains(q)
+    if tag_id is not None:
+        conditions.append("EXISTS (SELECT 1 FROM recipe_tags trt WHERE trt.recipe_id = r.id AND trt.tag_id = :tag)")
+        params["tag"] = tag_id
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY casefold(r.title)"
+    return conn.execute(sql, params).fetchall()
 
 
 def get_recipe(conn, recipe_id):
     return conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
 
 
+# Ingredient lines with what services/macros.py needs: unit grams, grams per piece, macros per 100 g
+_LINES_SQL = """SELECT ri.recipe_id, ri.quantity, ri.unit_id, ri.note,
+                       u.name AS unit, u.grams AS unit_grams,
+                       i.id AS ingredient_id, i.name, i.grams_per_piece,
+                       i.calories_100g, i.protein_100g, i.carbs_100g, i.fat_100g
+                FROM recipe_ingredients ri
+                JOIN ingredients i ON i.id = ri.ingredient_id
+                LEFT JOIN units u ON u.id = ri.unit_id"""
+
+
 def get_recipe_lines(conn, recipe_id):
-    """The recipe's ingredient lines in order, with ingredient and unit names."""
-    return conn.execute(
-        """SELECT ri.quantity, ri.unit_id, ri.note,
-                  i.id AS ingredient_id, i.name, u.name AS unit
-           FROM recipe_ingredients ri
-           JOIN ingredients i ON i.id = ri.ingredient_id
-           LEFT JOIN units u ON u.id = ri.unit_id
-           WHERE ri.recipe_id = ?
-           ORDER BY ri.position""", (recipe_id,)).fetchall()
+    """The recipe's ingredient lines in order, with ingredient and unit data."""
+    return conn.execute(_LINES_SQL + " WHERE ri.recipe_id = ? ORDER BY ri.position", (recipe_id,)).fetchall()
+
+
+def lines_by_recipe(conn):
+    """{recipe_id: [lines]} for every recipe, in one query (for the recipe cards)."""
+    grouped = defaultdict(list)
+    for line in conn.execute(_LINES_SQL + " ORDER BY ri.recipe_id, ri.position"):
+        grouped[line["recipe_id"]].append(line)
+    return grouped
+
+
+def _recipe_params(recipe):
+    """The optional columns (photo, source link) default to NULL."""
+    return {"photo_filename": None, "source_url": None, **recipe}
 
 
 def create_recipe(conn, recipe, lines):
-    """Insert a recipe and its lines; unknown ingredient names are added to the catalogue."""
+    """Insert a recipe, its lines and its tags (`recipe["tags"]`, optional); unknown ingredient
+    names are added to the catalogue."""
     with conn:
         cur = conn.execute(
-            """INSERT INTO recipes (title, servings, prep_minutes, cook_minutes, instructions, notes)
-               VALUES (:title, :servings, :prep_minutes, :cook_minutes, :instructions, :notes)""",
-            recipe)
+            """INSERT INTO recipes (title, photo_filename, source_url, servings, prep_minutes, cook_minutes,
+                                    instructions, notes)
+               VALUES (:title, :photo_filename, :source_url, :servings, :prep_minutes, :cook_minutes,
+                       :instructions, :notes)""",
+            _recipe_params(recipe))
         _save_lines(conn, cur.lastrowid, lines)
+        _save_tags(conn, cur.lastrowid, recipe.get("tags", []))
     return cur.lastrowid
 
 
 def update_recipe(conn, recipe_id, recipe, lines):
+    """Replace everything, including the photo: pass the current `photo_filename` to keep it."""
     with conn:
         conn.execute(
             """UPDATE recipes
-               SET title = :title, servings = :servings, prep_minutes = :prep_minutes,
-                   cook_minutes = :cook_minutes, instructions = :instructions, notes = :notes,
-                   updated_at = datetime('now')
+               SET title = :title, photo_filename = :photo_filename, source_url = :source_url,
+                   servings = :servings, prep_minutes = :prep_minutes, cook_minutes = :cook_minutes,
+                   instructions = :instructions, notes = :notes, updated_at = datetime('now')
                WHERE id = :id""",
-            {**recipe, "id": recipe_id})
+            {**_recipe_params(recipe), "id": recipe_id})
         conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
         _save_lines(conn, recipe_id, lines)
+        conn.execute("DELETE FROM recipe_tags WHERE recipe_id = ?", (recipe_id,))
+        _save_tags(conn, recipe_id, recipe.get("tags", []))
+        _delete_unused_tags(conn)
 
 
 def delete_recipe(conn, recipe_id):
     with conn:
         conn.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        _delete_unused_tags(conn)
 
 
 def _save_lines(conn, recipe_id, lines):
@@ -234,3 +304,40 @@ def _save_lines(conn, recipe_id, lines):
             """INSERT INTO recipe_ingredients (recipe_id, ingredient_id, position, quantity, unit_id, note)
                VALUES (?, ?, ?, ?, ?, ?)""",
             (recipe_id, ingredient_id, position, line["quantity"], line["unit_id"], line["note"]))
+
+
+# --- Tags ---
+# Tag names are stored casefolded (services/forms.py: parse_tags), so "Закуска" and "закуска" are one tag.
+
+def _save_tags(conn, recipe_id, tags):
+    for tag in tags:
+        conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag,))
+        conn.execute("INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) SELECT ?, id FROM tags WHERE name = ?",
+                     (recipe_id, tag))
+
+
+def _delete_unused_tags(conn):
+    conn.execute("DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM recipe_tags)")
+
+
+def list_tags(conn):
+    """Every tag used by a recipe, for the filter on the recipe list."""
+    return conn.execute(
+        """SELECT DISTINCT t.id, t.name FROM tags t JOIN recipe_tags rt ON rt.tag_id = t.id
+           ORDER BY casefold(t.name)""").fetchall()
+
+
+def get_recipe_tags(conn, recipe_id):
+    return conn.execute(
+        """SELECT t.id, t.name FROM tags t JOIN recipe_tags rt ON rt.tag_id = t.id
+           WHERE rt.recipe_id = ? ORDER BY casefold(t.name)""", (recipe_id,)).fetchall()
+
+
+def tags_by_recipe(conn):
+    """{recipe_id: [tags]} for every recipe, in one query (for the recipe cards)."""
+    grouped = defaultdict(list)
+    for row in conn.execute(
+            """SELECT rt.recipe_id, t.id, t.name FROM tags t JOIN recipe_tags rt ON rt.tag_id = t.id
+               ORDER BY casefold(t.name)"""):
+        grouped[row["recipe_id"]].append(row)
+    return grouped

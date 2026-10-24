@@ -57,10 +57,12 @@ CookingRecipe/
 ├── services/
 │   ├── text.py            # name_key() / casefold helpers for Cyrillic
 │   ├── forms.py           # form parsing/validation (numbers accept "0,5" and "0.5"), errors as translation keys
+│   ├── photos.py          # photo check/resize with Pillow, saving and deleting the files
 │   ├── macros.py          # grams conversion, recipe and menu macro totals
 │   └── shopping_list.py   # merging and scaling ingredients
 ├── templates/
 │   ├── base.html          # layout, navigation, flash messages, <meta charset="utf-8">
+│   ├── error.html         # simple error page (upload over the size limit)
 │   ├── macros.html        # form error helpers
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
@@ -71,7 +73,7 @@ CookingRecipe/
 │   ├── pico.min.css
 │   ├── app.css            # small custom styles (card grid, print styles)
 │   ├── app.js             # ingredient rows, shopping-list ticks
-│   └── placeholder.png    # shown when a recipe has no photo
+│   └── placeholder.svg    # shown on recipe cards without a photo
 ├── images/                # uploaded photos (not committed to git)
 ├── backups/               # automatic DB copies made before migrations (not committed)
 ├── tests/                 # pytest tests for services/ and db.py
@@ -81,25 +83,25 @@ CookingRecipe/
 └── doc/                   # this documentation
 ```
 
-`services/` contains plain functions: data goes in, results come out, with no Flask or database code. That keeps the calculations easy to test.
+`services/` contains plain functions: data goes in, results come out, with no Flask or database code. That keeps the calculations easy to test. (`photos.py` also writes and deletes files in the folder it is given.)
 
 ## Pages and routes
 
 | Method | URL | Purpose |
 |--------|-----|---------|
 | GET | `/` | Redirects to `/recipes` |
-| GET | `/recipes?q=&tag=` | Recipe card grid, with search and tag filter |
+| GET | `/recipes?q=&tag=` | Recipe card grid. `q` searches titles and ingredient names (ignoring case); `tag` is a tag id |
 | GET | `/recipes/new` | New recipe form |
-| POST | `/recipes` | Create a recipe (adds new ingredient names to the catalogue) |
+| POST | `/recipes` | Create a recipe (adds new ingredient names to the catalogue), with an optional photo |
 | GET | `/recipes/<id>` | Recipe detail with calculated macros |
 | GET | `/recipes/<id>/edit` | Edit form |
-| POST | `/recipes/<id>` | Update a recipe |
+| POST | `/recipes/<id>` | Update a recipe; a new photo replaces the old one, `remove_photo=1` removes it |
 | POST | `/recipes/<id>/delete` | Delete a recipe (and its photo file) |
 | GET | `/images/<filename>` | Serve an uploaded photo |
-| GET | `/ingredients?q=&missing=1` | Ingredient catalogue, with search and a "missing macros" filter |
+| GET | `/ingredients?q=&missing=1` | Ingredient catalogue, with search and a "missing data" filter (a macro is empty, or a recipe uses it in pieces without grams per piece) |
 | GET | `/ingredients/new` | New ingredient form |
 | POST | `/ingredients` | Create an ingredient |
-| GET | `/ingredients/<id>/edit` | Edit form (macros per 100 g, grams per piece) |
+| GET | `/ingredients/<id>/edit?next=` | Edit form (macros per 100 g, grams per piece). `next` (a path on this site) is where Save and Cancel go back to, e.g. the recipe that linked here |
 | POST | `/ingredients/<id>` | Update an ingredient |
 | POST | `/ingredients/<id>/delete` | Delete, only if no recipe uses it |
 | GET | `/units` | List of units, with an inline add/rename form |
@@ -129,7 +131,8 @@ HTML forms can only send GET and POST, so updates and deletes use POST with `/de
 | Database | SQLite `TEXT` is UTF-8. Every connection registers a `casefold()` SQL function for case-insensitive search and sorting |
 | Files | Always `open(..., encoding="utf-8")`. `start.bat` sets `PYTHONUTF8=1` |
 | Names | `services/text.py: name_key(s)` = `" ".join(s.split()).casefold()`, used for ingredient uniqueness and tags |
-| URLs | Pages use numeric ids, never names, so Cyrillic never appears in URLs |
+| URLs | Pages use numeric ids, never names, so Cyrillic never appears in URLs (the tag filter is `?tag=<id>` too). Only a typed search text can |
+| Tags | Split on commas, each passed through `name_key()`, so "Закуска" and "закуска" are the same tag. A tag no recipe uses any more is deleted |
 | Photos | Saved under random UUID file names, so a Bulgarian original file name doesn't matter |
 
 ## Interface language (English / Bulgarian)
@@ -163,11 +166,14 @@ Tests check that `en` and `bg` in `translations.py` have exactly the same keys, 
 
 ## Photo handling
 
-1. The form uploads a file. Only `jpg`, `jpeg`, `png` and `webp` are accepted, up to 10 MB.
-2. Pillow opens it, fixes the rotation from phone photos (EXIF), resizes it to at most 1600 px, and saves it as JPEG.
+1. The form uploads a file. Only JPEG, PNG and WebP images are accepted (checked by what Pillow finds in the file, not by its name), up to 10 MB (`config.MAX_PHOTO_BYTES`). A request bigger than that plus 1 MB is stopped by Flask's `MAX_CONTENT_LENGTH` and shows `error.html`.
+2. Pillow opens it, fixes the rotation from phone photos (EXIF), resizes it to at most 1600 px (`config.PHOTO_MAX_SIDE`), fills transparent parts with white, and saves it as JPEG.
 3. The file name is a random UUID, e.g. `images/3f2a…c1.jpg`. Only the file name is stored in `recipes.photo_filename`.
-4. When a photo is replaced or its recipe deleted, the old file is deleted from disk.
-5. If `photo_filename` is NULL, the page shows `static/placeholder.png`.
+4. When a photo is replaced or removed, or its recipe deleted, the old file is deleted from disk. If saving the recipe fails, the new file is deleted again.
+5. If the form has other errors the photo isn't saved, and the form asks to choose it again (browsers can't refill a file input).
+6. If `photo_filename` is NULL, recipe cards show `static/placeholder.svg`; the detail page just has no photo.
+
+The source link is stored only when it is an `http`/`https` address (`youtube.com/…` gets `https://` added). It opens in a new tab with `rel="noopener noreferrer"`, and its text is the site name (`youtube.com`).
 
 ## Running
 
@@ -193,6 +199,7 @@ python app.py
   - `macros.py`: converting to grams for every kind of unit, `бр.` with and without grams per piece, missing macros, NULL quantities, per-serving division
   - `shopping_list.py`: merging, scaling, NULL quantities
   - `text.py`: Cyrillic case folding (`"  Пилешко   ФИЛЕ " → "пилешко филе"`)
+  - `photos.py`: accepted formats, resizing, EXIF rotation, transparency, size limit
 - `translations.py`: English and Bulgarian have the same set of keys. `i18n.py`: fallback to English, unknown cookie value, placeholders.
 - `db.py` tests use a temporary SQLite file. They check that all migrations apply cleanly to an empty database, and that Bulgarian text is saved and loaded correctly.
 - `tests/test_routes.py` drives the main flows through Flask's test client (create/edit/delete, validation errors, blocked ingredient delete). Layout and JavaScript are checked by hand in the browser.

@@ -9,30 +9,54 @@
 </div>
 
 <form method="get" action="{{ url_for('ingredients.index') }}" role="search">
+  {% if missing %}<input type="hidden" name="missing" value="1">{% endif %}
   <input type="search" name="q" value="{{ q }}" placeholder="{{ t('ingredients.search_placeholder') }}"
          aria-label="{{ t('ingredients.search_placeholder') }}">
   <button type="submit">{{ t("btn.search") }}</button>
 </form>
 
+<p class="filter-toggle">
+  {% if missing %}
+    <strong>{{ t("ingredients.filter_missing_on") }}</strong>
+    · <a href="{{ url_for('ingredients.index', q=q or none) }}">{{ t("ingredients.show_all") }}</a>
+  {% else %}
+    <a href="{{ url_for('ingredients.index', q=q or none, missing=1) }}">{{ t("ingredients.filter_missing") }}</a>
+  {% endif %}
+</p>
+
 {% if ingredients %}
-  <table>
-    <thead>
-      <tr>
-        <th>{{ t("label.name") }}</th>
-        <th>{{ t("ingredients.col_used_in") }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for ingredient in ingredients %}
+  <figure class="table-scroll">
+    <table>
+      <thead>
         <tr>
-          <td><a href="{{ url_for('ingredients.edit', ingredient_id=ingredient.id) }}">{{ ingredient.name }}</a></td>
-          <td>{{ ingredient.recipe_count }}</td>
+          <th>{{ t("label.name") }}</th>
+          <th class="num">{{ t("ingredients.col_calories") }}</th>
+          <th class="num">{{ t("ingredients.col_protein") }}</th>
+          <th class="num">{{ t("ingredients.col_carbs") }}</th>
+          <th class="num">{{ t("ingredients.col_fat") }}</th>
+          <th class="num">{{ t("ingredients.col_grams_per_piece") }}</th>
+          <th class="num">{{ t("ingredients.col_used_in") }}</th>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for ingredient in ingredients %}
+          <tr>
+            <td><a href="{{ url_for('ingredients.edit', ingredient_id=ingredient.id) }}">{{ ingredient.name }}</a></td>
+            {% for macro in macro_names %}
+              <td class="num">{{ ingredient[macro ~ "_100g"]|num or "—" }}</td>
+            {% endfor %}
+            <td class="num">{{ ingredient.grams_per_piece|num or "—" }}</td>
+            <td class="num">{{ ingredient.recipe_count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </figure>
+  <p><small>{{ t("ingredients.per_100g_note") }}</small></p>
 {% elif q %}
   <p>{{ t("ingredients.no_results", q=q) }}</p>
+{% elif missing %}
+  <p>{{ t("ingredients.no_missing") }}</p>
 {% else %}
   <p>{{ t("ingredients.empty") }}</p>
 {% endif %}

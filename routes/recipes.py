@@ -1,10 +1,12 @@
-"""Recipes: card list, detail, create/edit/delete."""
+"""Recipes: card list with search and tag filter, detail, create/edit/delete, photo upload."""
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
 import db
 from i18n import num, t
+from services import photos
 from services.forms import RECIPE_FIELDS, ROW_FIELDS, parse_recipe
+from services.macros import recipe_macros
 
 bp = Blueprint("recipes", __name__, url_prefix="/recipes")
 
@@ -33,33 +35,73 @@ def _submitted():
 
 def _render_form(recipe, fields, rows, errors, status=200):
     conn = db.get_db()
+    photo_dropped = bool(errors) and bool(request.files.get("photo"))  # browsers can't refill a file input
     return render_template("recipes/form.html", recipe=recipe, form=fields,
                            rows=rows or [_blank_row()], blank_row=_blank_row(), errors=errors,
+                           photo_dropped=photo_dropped, remove_photo=request.form.get("remove_photo") == "1",
                            units=db.list_units(conn), ingredient_names=db.ingredient_names(conn)), status
+
+
+def _uploaded_photo():
+    """(jpeg bytes or None, error key or None) for the photo chosen on the form."""
+    upload = request.files.get("photo")
+    if not upload:
+        return None, None
+    try:
+        return photos.process_photo(upload.read(current_app.config["MAX_PHOTO_BYTES"] + 1)), None
+    except photos.PhotoError as e:
+        return None, e.key
 
 
 def _save(recipe_id=None):
     """Validate and save the submitted form; re-render it with errors if invalid."""
     conn = db.get_db()
+    images_dir = current_app.config["IMAGES_DIR"]
+    existing = db.get_recipe(conn, recipe_id) if recipe_id else None
     fields, rows = _submitted()
     unit_ids = {u["id"] for u in db.list_units(conn)}
     recipe, lines, errors = parse_recipe(fields, rows, unit_ids)
+    jpeg, photo_error = _uploaded_photo()
+    if photo_error:
+        errors["photo"] = photo_error
     if errors:
-        existing = db.get_recipe(conn, recipe_id) if recipe_id else None
         return _render_form(existing, fields, rows, errors, 400)
 
-    if recipe_id:
-        db.update_recipe(conn, recipe_id, recipe, lines)
-        flash(t("recipes.msg_updated", title=recipe["title"]), "success")
+    old_photo = existing["photo_filename"] if existing else None
+    if jpeg:
+        recipe["photo_filename"] = photos.save_photo(images_dir, jpeg)
+    elif request.form.get("remove_photo") == "1":
+        recipe["photo_filename"] = None
     else:
-        recipe_id = db.create_recipe(conn, recipe, lines)
-        flash(t("recipes.msg_created", title=recipe["title"]), "success")
+        recipe["photo_filename"] = old_photo
+
+    try:
+        if recipe_id:
+            db.update_recipe(conn, recipe_id, recipe, lines)
+        else:
+            recipe_id = db.create_recipe(conn, recipe, lines)
+    except Exception:
+        if jpeg:
+            photos.delete_photo(images_dir, recipe["photo_filename"])
+        raise
+    if old_photo != recipe["photo_filename"]:
+        photos.delete_photo(images_dir, old_photo)
+
+    flash(t("recipes.msg_updated" if existing else "recipes.msg_created", title=recipe["title"]), "success")
     return redirect(url_for(".detail", recipe_id=recipe_id))
 
 
 @bp.get("")
 def index():
-    return render_template("recipes/list.html", recipes=db.list_recipes(db.get_db()))
+    conn = db.get_db()
+    q = request.args.get("q", "").strip()
+    tags = db.list_tags(conn)
+    tag = next((tag for tag in tags if str(tag["id"]) == request.args.get("tag")), None)
+    recipes = db.list_recipes(conn, q, tag["id"] if tag else None)
+    lines = db.lines_by_recipe(conn)
+    macros = {r["id"]: recipe_macros(lines.get(r["id"], []), r["servings"]) for r in recipes}
+    return render_template("recipes/list.html", recipes=recipes, macros=macros, q=q, tags=tags,
+                           tag=tag, recipe_tags=db.tags_by_recipe(conn))
 
 
 @bp.get("/new")
@@ -76,18 +118,23 @@ def create():
 @bp.get("/<int:recipe_id>")
 def detail(recipe_id):
     recipe = _load(recipe_id)
-    return render_template("recipes/detail.html", recipe=recipe,
-                           lines=db.get_recipe_lines(db.get_db(), recipe_id))
+    conn = db.get_db()
+    lines = db.get_recipe_lines(conn, recipe_id)
+    return render_template("recipes/detail.html", recipe=recipe, lines=lines,
+                           tags=db.get_recipe_tags(conn, recipe_id),
+                           macros=recipe_macros(lines, recipe["servings"]))
 
 
 @bp.get("/<int:recipe_id>/edit")
 def edit(recipe_id):
     recipe = _load(recipe_id)
-    fields = {name: "" if recipe[name] is None else str(recipe[name]) for name in RECIPE_FIELDS}
+    conn = db.get_db()
+    fields = {name: "" if recipe[name] is None else str(recipe[name]) for name in RECIPE_FIELDS if name != "tags"}
+    fields["tags"] = ", ".join(tag["name"] for tag in db.get_recipe_tags(conn, recipe_id))
     rows = [{"name": line["name"], "quantity": num(line["quantity"]),
              "unit": "" if line["unit_id"] is None else str(line["unit_id"]),
              "note": line["note"] or ""}
-            for line in db.get_recipe_lines(db.get_db(), recipe_id)]
+            for line in db.get_recipe_lines(conn, recipe_id)]
     return _render_form(recipe, fields, rows, {})
 
 
@@ -101,5 +148,6 @@ def update(recipe_id):
 def delete(recipe_id):
     recipe = _load(recipe_id)
     db.delete_recipe(db.get_db(), recipe_id)
+    photos.delete_photo(current_app.config["IMAGES_DIR"], recipe["photo_filename"])
     flash(t("recipes.msg_deleted", title=recipe["title"]), "success")
     return redirect(url_for(".index"))

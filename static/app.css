@@ -60,6 +60,33 @@
   margin: 0;
 }
 
+/* Numbers line up on the right in tables */
+th.num,
+td.num {
+  text-align: right;
+}
+
+/* Wide tables scroll sideways on a narrow screen instead of squeezing */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.filter-toggle {
+  margin-top: calc(var(--pico-spacing) * -0.5);
+}
+
+.macros-table {
+  max-width: 32rem;
+}
+
+.macros-incomplete ul {
+  margin-bottom: 0;
+}
+
+.macros-incomplete li {
+  list-style: none;
+}
+
 /* Recipe cards */
 .card-grid {
   display: grid;
@@ -69,6 +96,78 @@
 
 .recipe-card {
   margin: 0;
+  overflow: hidden;
+}
+
+/* Photo across the full width of the card, above the title */
+.card-photo {
+  display: block;
+  margin: calc(var(--pico-block-spacing-vertical) * -1) calc(var(--pico-block-spacing-horizontal) * -1)
+    var(--pico-block-spacing-vertical);
+}
+
+.card-photo img,
+.recipe-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--pico-muted-border-color);
+}
+
+.recipe-photo {
+  max-height: 28rem;
+  aspect-ratio: auto;
+  margin-bottom: var(--pico-spacing);
+  border-radius: var(--pico-border-radius);
+}
+
+/* Current photo next to the file input on the recipe form */
+.photo-field {
+  display: flex;
+  gap: var(--pico-spacing);
+  align-items: flex-start;
+}
+
+.photo-field > div {
+  flex: 1;
+}
+
+.photo-thumb {
+  width: 8rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--pico-border-radius);
+}
+
+/* Tags: small rounded labels, used as filter links */
+.tag-filter,
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-filter {
+  margin-bottom: var(--pico-spacing);
+}
+
+.tag-list {
+  margin: 0.5rem 0 0;
+}
+
+.tag {
+  padding: 0.1rem 0.6rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 1rem;
+  font-size: 0.875em;
+  text-decoration: none;
+}
+
+.tag[aria-current] {
+  background: var(--pico-primary-background);
+  border-color: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
 }
 
 .recipe-card h3 {

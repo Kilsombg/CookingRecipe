@@ -3,6 +3,13 @@
 
 {% macro error_text(error) %}{% if error %}<small>{{ t(error) }}</small>{% endif %}{% endmacro %}
 
+{# A calculated macro: "377 kcal" or "46.2 g"; "—" when unknown. #}
+{% macro macro_value(macro, value) -%}
+  {%- if value is none %}—
+  {%- elif macro == "calories" %}{{ t("macros.kcal", n=value|round|num) }}
+  {%- else %}{{ t("macros.grams", n=value|round(1)|num) }}{% endif -%}
+{%- endmacro %}
+
 {% macro form_errors_notice(errors) %}
   {% if errors %}<p class="flash flash-error" role="alert">{{ t("msg.fix_errors") }}</p>{% endif %}
 {% endmacro %}

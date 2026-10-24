@@ -8,19 +8,62 @@
   <a href="{{ url_for('recipes.new') }}" role="button">{{ t("recipes.new") }}</a>
 </div>
 
+<form method="get" action="{{ url_for('recipes.index') }}" role="search">
+  {% if tag %}<input type="hidden" name="tag" value="{{ tag.id }}">{% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="{{ t('recipes.search_placeholder') }}"
+         aria-label="{{ t('recipes.search_placeholder') }}">
+  <button type="submit">{{ t("btn.search") }}</button>
+</form>
+
+{% if tags %}
+  <nav class="tag-filter" aria-label="{{ t('label.tags') }}">
+    <a href="{{ url_for('recipes.index', q=q or none) }}" class="tag"
+       {% if not tag %}aria-current="true"{% endif %}>{{ t("recipes.all_tags") }}</a>
+    {% for item in tags %}
+      <a href="{{ url_for('recipes.index', q=q or none, tag=item.id) }}" class="tag"
+         {% if tag and tag.id == item.id %}aria-current="true"{% endif %}>{{ item.name }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
 {% if recipes %}
   <div class="card-grid">
     {% for recipe in recipes %}
       <article class="recipe-card">
+        <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}" class="card-photo" tabindex="-1" aria-hidden="true">
+          {% if recipe.photo_filename %}
+            <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="" loading="lazy">
+          {% else %}
+            <img src="{{ url_for('static', filename='placeholder.svg') }}" alt="">
+          {% endif %}
+        </a>
         <h3><a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h3>
         <p class="recipe-meta">
           <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
           {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
           {% if total %}<span>{{ t("recipes.total_time", n=total) }}</span>{% endif %}
+          {% set recipe_macros = macros[recipe.id] %}
+          {% set calories = recipe_macros.per_serving.calories %}
+          {% if calories is not none %}
+            {% if recipe_macros.incomplete %}
+              <span title="{{ t('recipes.card_kcal_partial_hint') }}">{{ t("recipes.card_kcal_partial", n=calories|round|num) }}</span>
+            {% else %}
+              <span>{{ t("recipes.card_kcal", n=calories|round|num) }}</span>
+            {% endif %}
+          {% endif %}
         </p>
+        {% if recipe_tags[recipe.id] %}
+          <p class="tag-list">
+            {% for item in recipe_tags[recipe.id] %}
+              <a href="{{ url_for('recipes.index', tag=item.id) }}" class="tag">{{ item.name }}</a>
+            {% endfor %}
+          </p>
+        {% endif %}
       </article>
     {% endfor %}
   </div>
+{% elif q or tag %}
+  <p>{{ t("recipes.no_results") }}</p>
 {% else %}
   <p>{{ t("recipes.empty") }}</p>
 {% endif %}

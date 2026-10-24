@@ -1,11 +1,13 @@
 import secrets
 
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, render_template, send_from_directory, url_for
 
 import config
 import db
 import i18n
 from routes import ingredients, recipes
+from services.forms import url_host
+from services.macros import MACROS
 
 
 def create_app(overrides=None):
@@ -17,6 +19,9 @@ def create_app(overrides=None):
         MIGRATIONS_DIR=config.MIGRATIONS_DIR,
         BACKUPS_DIR=config.BACKUPS_DIR,
         IMAGES_DIR=config.IMAGES_DIR,
+        MAX_PHOTO_BYTES=config.MAX_PHOTO_BYTES,
+        # Room for the rest of the recipe form; a bigger photo is rejected with a message by the form
+        MAX_CONTENT_LENGTH=config.MAX_PHOTO_BYTES + 1024 * 1024,
     )
     app.config.update(overrides or {})
 
@@ -24,12 +29,22 @@ def create_app(overrides=None):
                app.config["BACKUPS_DIR"], app.config["IMAGES_DIR"])
     db.init_app(app)
     i18n.init_app(app)
+    app.jinja_env.globals["macro_names"] = MACROS
+    app.jinja_env.filters["host"] = url_host
     app.register_blueprint(recipes.bp)
     app.register_blueprint(ingredients.bp)
 
     @app.get("/")
     def index():
         return redirect(url_for("recipes.index"))
+
+    @app.get("/images/<filename>")
+    def image(filename):
+        return send_from_directory(app.config["IMAGES_DIR"], filename)
+
+    @app.errorhandler(413)
+    def too_large(e):
+        return render_template("error.html", message=i18n.t("recipes.error_photo_too_large")), 413
 
     return app
 

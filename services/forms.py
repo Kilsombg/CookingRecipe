@@ -4,9 +4,15 @@ Errors are translation keys, so the routes can show them with t().
 """
 
 import math
+from urllib.parse import urlsplit
 
-RECIPE_FIELDS = ("title", "servings", "prep_minutes", "cook_minutes", "instructions", "notes")
+from services.text import name_key
+
+RECIPE_FIELDS = ("title", "source_url", "servings", "prep_minutes", "cook_minutes", "instructions", "notes", "tags")
 ROW_FIELDS = ("name", "quantity", "unit", "note")
+INGREDIENT_FIELDS = ("name", "calories_100g", "protein_100g", "carbs_100g", "fat_100g", "grams_per_piece")
+INGREDIENT_VALUE_FIELDS = INGREDIENT_FIELDS[1:]
+GRAM_MACRO_FIELDS = ("protein_100g", "carbs_100g", "fat_100g")
 
 
 def clean_text(s):
@@ -41,6 +47,19 @@ def format_number(x, decimal_sep="."):
     return f"{x:.3f}".rstrip("0").rstrip(".").replace(".", decimal_sep)
 
 
+def _decimal(raw, allow_zero):
+    """Return (value, error_key) for an optional decimal field that can't be negative."""
+    try:
+        value = parse_number(raw)
+    except ValueError:
+        return None, "error.number"
+    if value is None:
+        return None, None
+    if value < 0 or (value == 0 and not allow_zero):
+        return None, "error.non_negative_number" if allow_zero else "error.positive_number"
+    return value, None
+
+
 def _whole_number(raw, minimum, required=False):
     """Return (value, error_key) for a whole-number field."""
     raw = (raw or "").strip()
@@ -55,6 +74,39 @@ def _whole_number(raw, minimum, required=False):
     return value, None
 
 
+def parse_source_url(raw):
+    """Return (url, error_key) for the optional source link.
+
+    "youtube.com/watch?v=1" -> "https://youtube.com/watch?v=1"; only http(s) links are accepted,
+    so the link can't run a script when clicked.
+    """
+    url = clean_text(raw)
+    if url is None:
+        return None, None
+    if "://" not in url:
+        url = "https://" + url
+    parts = urlsplit(url)
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc or any(c.isspace() for c in url):
+        return None, "recipes.error_source_url"
+    return url, None
+
+
+def url_host(url):
+    """"https://www.youtube.com/watch?v=1" -> "youtube.com", to show as the link text."""
+    host = urlsplit(url or "").hostname or ""
+    return host.removeprefix("www.")
+
+
+def parse_tags(raw):
+    """"Закуска, бързо,, закуска" -> ["закуска", "бързо"]: casefolded, no repeats, in typed order."""
+    tags = []
+    for part in (raw or "").split(","):
+        tag = name_key(part)
+        if tag and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
 def parse_ingredient_row(row, unit_ids):
     """Return (line, error_key) for one ingredient row; (None, None) for a blank row."""
     name = clean_name(row.get("name"))
@@ -66,12 +118,9 @@ def parse_ingredient_row(row, unit_ids):
     if not name:
         return None, "recipes.error_row_name"
 
-    try:
-        quantity = parse_number(quantity_raw)
-    except ValueError:
-        return None, "error.number"
-    if quantity is not None and quantity <= 0:
-        return None, "error.positive_number"
+    quantity, error = _decimal(quantity_raw, allow_zero=False)
+    if error:
+        return None, error
 
     unit_id = int(unit_raw) if unit_raw.isdigit() else None
     if unit_raw and unit_id not in unit_ids:
@@ -89,18 +138,23 @@ def parse_recipe(fields, rows, unit_ids):
 
     fields: raw strings keyed by RECIPE_FIELDS.
     rows: one dict of raw strings (keyed by ROW_FIELDS) per ingredient row; blank rows are skipped.
-    Returns (recipe, lines, errors). `errors` maps a field name to a key, and "rows" to
-    {row index: key}; it is empty when the form is valid.
+    Returns (recipe, lines, errors). `recipe["tags"]` is a list of tag names. `errors` maps a
+    field name to a key, and "rows" to {row index: key}; it is empty when the form is valid.
     """
     errors = {}
     recipe = {
         "title": clean_name(fields.get("title")),
         "instructions": clean_text(fields.get("instructions")),
         "notes": clean_text(fields.get("notes")),
+        "tags": parse_tags(fields.get("tags")),
     }
     for field in ("title", "instructions"):
         if recipe[field] is None:
             errors[field] = "error.required"
+
+    recipe["source_url"], error = parse_source_url(fields.get("source_url"))
+    if error:
+        errors["source_url"] = error
 
     for field, minimum, required in (("servings", 1, True), ("prep_minutes", 0, False),
                                      ("cook_minutes", 0, False)):
@@ -121,3 +175,28 @@ def parse_recipe(fields, rows, unit_ids):
         errors["ingredients"] = "recipes.error_no_ingredients"
 
     return recipe, lines, errors
+
+
+def parse_ingredient(fields):
+    """Validate the ingredient form.
+
+    fields: raw strings keyed by INGREDIENT_FIELDS. Every value except the name is optional.
+    Returns (name, values, errors): `values` maps INGREDIENT_VALUE_FIELDS to numbers or None,
+    `errors` maps a field name (or "macros" for the protein + carbs + fat check) to a key.
+    """
+    errors = {}
+    name = clean_name(fields.get("name"))
+    if name is None:
+        errors["name"] = "error.required"
+
+    values = {}
+    for field in INGREDIENT_VALUE_FIELDS:
+        values[field], error = _decimal(fields.get(field), allow_zero=field != "grams_per_piece")
+        if error:
+            errors[field] = error
+
+    # Rounded so that 33.3 + 33.3 + 33.4 isn't rejected for a floating-point leftover
+    if round(sum(values[f] or 0 for f in GRAM_MACRO_FIELDS), 6) > 100:
+        errors["macros"] = "ingredients.error_macros_over_100"
+
+    return name, values, errors

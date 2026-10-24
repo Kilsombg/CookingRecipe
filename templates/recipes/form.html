@@ -28,13 +28,41 @@
 <h1>{{ heading }}</h1>
 {{ form_errors_notice(errors) }}
 
-<form method="post"
+<form method="post" enctype="multipart/form-data"
       action="{{ url_for('recipes.update', recipe_id=recipe.id) if recipe else url_for('recipes.create') }}">
   <label>
     {{ t("label.title") }}
     <input name="title" value="{{ form.title }}" required {% if not recipe %}autofocus{% endif %}
            {{ invalid(errors.title) }}>
     {{ error_text(errors.title) }}
+  </label>
+
+  <div class="photo-field">
+    {% if recipe and recipe.photo_filename %}
+      <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="" class="photo-thumb">
+    {% endif %}
+    <div>
+      <label>
+        {{ t("recipes.photo_new") if recipe and recipe.photo_filename else t("label.photo") }}
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" {{ invalid(errors.photo) }}>
+        {% if errors.photo %}{{ error_text(errors.photo) }}
+        {% elif photo_dropped %}<small>{{ t("recipes.photo_choose_again") }}</small>
+        {% else %}<small>{{ t("recipes.photo_help") }}</small>{% endif %}
+      </label>
+      {% if recipe and recipe.photo_filename %}
+        <label>
+          <input type="checkbox" name="remove_photo" value="1" {% if remove_photo %}checked{% endif %}>
+          {{ t("recipes.photo_remove") }}
+        </label>
+      {% endif %}
+    </div>
+  </div>
+
+  <label>
+    {{ t("label.source_url") }}
+    <input name="source_url" value="{{ form.source_url }}" type="text" inputmode="url"
+           placeholder="https://…" {{ invalid(errors.source_url) }}>
+    {{ error_text(errors.source_url) }}
   </label>
 
   <div class="grid">
@@ -76,6 +104,12 @@
     <textarea name="instructions" rows="10" required {{ invalid(errors.instructions) }}>{{ form.instructions }}</textarea>
     {% if errors.instructions %}{{ error_text(errors.instructions) }}
     {% else %}<small>{{ t("recipes.instructions_help") }}</small>{% endif %}
+  </label>
+
+  <label>
+    {{ t("label.tags") }}
+    <input name="tags" value="{{ form.tags }}" autocomplete="off">
+    <small>{{ t("recipes.tags_help") }}</small>
   </label>
 
   <label>

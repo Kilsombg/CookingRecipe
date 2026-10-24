@@ -4,20 +4,51 @@
 {% set heading = t("ingredients.edit_title") if ingredient else t("ingredients.new") %}
 {% block title %}{{ heading }} · CookingRecipe{% endblock %}
 
+{% macro number_field(field, label) %}
+  <label>
+    {{ label }}
+    <input name="{{ field }}" value="{{ form[field] }}" inputmode="decimal" {{ invalid(errors[field]) }}>
+    {{ error_text(errors[field]) }}
+  </label>
+{% endmacro %}
+
 {% block content %}
 <h1>{{ heading }}</h1>
 {{ form_errors_notice(errors) }}
 
 <form method="post"
       action="{{ url_for('ingredients.update', ingredient_id=ingredient.id) if ingredient else url_for('ingredients.create') }}">
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
   <label>
     {{ t("label.name") }}
-    <input name="name" value="{{ form.name }}" required autofocus {{ invalid(errors.name) }}>
+    <input name="name" value="{{ form.name }}" required {% if not ingredient %}autofocus{% endif %}
+           {{ invalid(errors.name) }}>
     {{ error_text(errors.name) }}
   </label>
+
+  <fieldset>
+    <legend>{{ t("ingredients.macros_per_100g") }}</legend>
+    <p><small>{{ t("ingredients.macros_help") }}</small></p>
+    <div class="grid">
+      {{ number_field("calories_100g", t("ingredients.calories_kcal")) }}
+      {{ number_field("protein_100g", t("ingredients.protein_g")) }}
+      {{ number_field("carbs_100g", t("ingredients.carbs_g")) }}
+      {{ number_field("fat_100g", t("ingredients.fat_g")) }}
+    </div>
+    {% if errors.macros %}<p class="flash flash-error">{{ t(errors.macros) }}</p>{% endif %}
+  </fieldset>
+
+  <label>
+    {{ t("label.grams_per_piece") }}
+    <input name="grams_per_piece" value="{{ form.grams_per_piece }}" inputmode="decimal"
+           {{ invalid(errors.grams_per_piece) }}>
+    {% if errors.grams_per_piece %}{{ error_text(errors.grams_per_piece) }}
+    {% else %}<small>{{ t("ingredients.grams_per_piece_help") }}</small>{% endif %}
+  </label>
+
   <div class="actions">
     <button type="submit">{{ t("btn.save") }}</button>
-    <a href="{{ url_for('ingredients.index') }}" role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
+    <a href="{{ back_url }}" role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
   </div>
 </form>
 
