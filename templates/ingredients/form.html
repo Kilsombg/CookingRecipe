@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text, form_errors_notice %}
+
+{% set heading = t("ingredients.edit_title") if ingredient else t("ingredients.new") %}
+{% block title %}{{ heading }} · CookingRecipe{% endblock %}
+
+{% block content %}
+<h1>{{ heading }}</h1>
+{{ form_errors_notice(errors) }}
+
+<form method="post"
+      action="{{ url_for('ingredients.update', ingredient_id=ingredient.id) if ingredient else url_for('ingredients.create') }}">
+  <label>
+    {{ t("label.name") }}
+    <input name="name" value="{{ form.name }}" required autofocus {{ invalid(errors.name) }}>
+    {{ error_text(errors.name) }}
+  </label>
+  <div class="actions">
+    <button type="submit">{{ t("btn.save") }}</button>
+    <a href="{{ url_for('ingredients.index') }}" role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
+  </div>
+</form>
+
+{% if ingredient %}
+  <hr>
+  {% if used_in %}
+    <p>{{ t("ingredients.used_in") }}</p>
+    <ul>
+      {% for recipe in used_in %}
+        <li><a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></li>
+      {% endfor %}
+    </ul>
+    <p><small>{{ t("ingredients.cannot_delete") }}</small></p>
+  {% else %}
+    <p>{{ t("ingredients.not_used") }}</p>
+    <form method="post" action="{{ url_for('ingredients.delete', ingredient_id=ingredient.id) }}"
+          data-confirm="{{ t('ingredients.confirm_delete') }}">
+      <button type="submit" class="secondary">{{ t("btn.delete") }}</button>
+    </form>
+  {% endif %}
+{% endif %}
+{% endblock %}

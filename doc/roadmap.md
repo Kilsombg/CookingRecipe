@@ -25,10 +25,10 @@ Each milestone ends with something you can actually use. Work through them in or
 **From here on:** every new page, button, message and label is added to `translations.py` in both languages, never written directly in a template. Recipe content is never translated.
 
 ## M3 — Ingredients and recipes (core)
-- [ ] Ingredient catalogue: list, add, edit, delete (blocked when the ingredient is used)
-- [ ] Create / edit / delete a recipe, with ingredient rows you can add or remove (`<datalist>` autocomplete, unknown names added to the catalogue automatically)
-- [ ] Recipe detail page
-- [ ] Recipe list as a card grid
+- [x] Ingredient catalogue: list, add, edit, delete (blocked when the ingredient is used)
+- [x] Create / edit / delete a recipe, with ingredient rows you can add or remove (`<datalist>` autocomplete, unknown names added to the catalogue automatically)
+- [x] Recipe detail page
+- [x] Recipe list as a card grid
 
 **Done when:** you can type in your Notepad recipes, in Bulgarian, and stop using Notepad.
 

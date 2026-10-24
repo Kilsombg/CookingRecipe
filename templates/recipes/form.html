@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text, form_errors_notice %}
+
+{% set heading = t("recipes.edit_title") if recipe else t("recipes.new") %}
+{% block title %}{{ heading }} · CookingRecipe{% endblock %}
+
+{% macro ingredient_row(row, error=none) %}
+  <div class="ingredient-row" data-row>
+    <input name="ing_name" value="{{ row.name }}" list="ingredient-names" autocomplete="off"
+           aria-label="{{ t('label.ingredient') }}" placeholder="{{ t('label.ingredient') }}" {{ invalid(error) }}>
+    <input name="ing_quantity" value="{{ row.quantity }}" inputmode="decimal"
+           aria-label="{{ t('label.quantity') }}" placeholder="{{ t('label.quantity') }}">
+    <select name="ing_unit" aria-label="{{ t('label.unit') }}">
+      <option value="">—</option>
+      {% for unit in units %}
+        <option value="{{ unit.id }}" {% if row.unit == unit.id|string %}selected{% endif %}>{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <input name="ing_note" value="{{ row.note }}"
+           aria-label="{{ t('label.note') }}" placeholder="{{ t('label.note') }}">
+    <button type="button" class="secondary outline" data-remove-row
+            aria-label="{{ t('recipes.remove_ingredient') }}" title="{{ t('recipes.remove_ingredient') }}">×</button>
+    {% if error %}<small class="row-error">{{ t(error) }}</small>{% endif %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+<h1>{{ heading }}</h1>
+{{ form_errors_notice(errors) }}
+
+<form method="post"
+      action="{{ url_for('recipes.update', recipe_id=recipe.id) if recipe else url_for('recipes.create') }}">
+  <label>
+    {{ t("label.title") }}
+    <input name="title" value="{{ form.title }}" required {% if not recipe %}autofocus{% endif %}
+           {{ invalid(errors.title) }}>
+    {{ error_text(errors.title) }}
+  </label>
+
+  <div class="grid">
+    <label>
+      {{ t("label.servings") }}
+      <input name="servings" value="{{ form.servings }}" type="number" min="1" step="1" required
+             {{ invalid(errors.servings) }}>
+      {{ error_text(errors.servings) }}
+    </label>
+    <label>
+      {{ t("label.prep_minutes") }}
+      <input name="prep_minutes" value="{{ form.prep_minutes }}" type="number" min="0" step="1"
+             {{ invalid(errors.prep_minutes) }}>
+      {{ error_text(errors.prep_minutes) }}
+    </label>
+    <label>
+      {{ t("label.cook_minutes") }}
+      <input name="cook_minutes" value="{{ form.cook_minutes }}" type="number" min="0" step="1"
+             {{ invalid(errors.cook_minutes) }}>
+      {{ error_text(errors.cook_minutes) }}
+    </label>
+  </div>
+
+  <fieldset>
+    <legend>{{ t("recipes.ingredients") }}</legend>
+    <p><small>{{ t("recipes.ingredients_help") }}</small></p>
+    <div id="ingredient-rows">
+      {% for row in rows %}
+        {{ ingredient_row(row, errors.rows[loop.index0] if errors.rows else none) }}
+      {% endfor %}
+    </div>
+    {% if errors.ingredients %}<p class="flash flash-error">{{ t(errors.ingredients) }}</p>{% endif %}
+    <button type="button" class="secondary outline" data-add-row="ingredient-rows"
+            data-template="ingredient-row-template">+ {{ t("recipes.add_ingredient") }}</button>
+  </fieldset>
+
+  <label>
+    {{ t("label.instructions") }}
+    <textarea name="instructions" rows="10" required {{ invalid(errors.instructions) }}>{{ form.instructions }}</textarea>
+    {% if errors.instructions %}{{ error_text(errors.instructions) }}
+    {% else %}<small>{{ t("recipes.instructions_help") }}</small>{% endif %}
+  </label>
+
+  <label>
+    {{ t("label.notes") }}
+    <textarea name="notes" rows="3">{{ form.notes }}</textarea>
+  </label>
+
+  <div class="actions">
+    <button type="submit">{{ t("btn.save") }}</button>
+    <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) if recipe else url_for('recipes.index') }}"
+       role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
+  </div>
+</form>
+
+<datalist id="ingredient-names">
+  {% for name in ingredient_names %}<option value="{{ name }}">{% endfor %}
+</datalist>
+
+<template id="ingredient-row-template">{{ ingredient_row(blank_row) }}</template>
+{% endblock %}

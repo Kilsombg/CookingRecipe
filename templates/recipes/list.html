@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t("recipes.title") }} · CookingRecipe{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ t("recipes.title") }}</h1>
+  <a href="{{ url_for('recipes.new') }}" role="button">{{ t("recipes.new") }}</a>
+</div>
+
+{% if recipes %}
+  <div class="card-grid">
+    {% for recipe in recipes %}
+      <article class="recipe-card">
+        <h3><a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a></h3>
+        <p class="recipe-meta">
+          <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
+          {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
+          {% if total %}<span>{{ t("recipes.total_time", n=total) }}</span>{% endif %}
+        </p>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>{{ t("recipes.empty") }}</p>
+{% endif %}
+{% endblock %}

@@ -6,6 +6,7 @@
   <title>{% block title %}CookingRecipe{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 <body>
   <header class="container">
@@ -14,8 +15,8 @@
         <li><strong><a href="/" class="contrast">CookingRecipe</a></strong></li>
       </ul>
       <ul>
-        <li><a href="/recipes">{{ t("nav.recipes") }}</a></li>
-        <li><a href="/ingredients">{{ t("nav.ingredients") }}</a></li>
+        <li><a href="{{ url_for('recipes.index') }}">{{ t("nav.recipes") }}</a></li>
+        <li><a href="{{ url_for('ingredients.index') }}">{{ t("nav.ingredients") }}</a></li>
         <li><a href="/menus">{{ t("nav.menus") }}</a></li>
         <li>
           <form method="post" action="{{ url_for('i18n.set_language') }}" class="lang-switch"
@@ -33,6 +34,9 @@
     </nav>
   </header>
   <main class="container">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <p class="flash flash-{{ category }}" role="status">{{ message }}</p>
+    {% endfor %}
     {% block content %}{% endblock %}
   </main>
 </body>

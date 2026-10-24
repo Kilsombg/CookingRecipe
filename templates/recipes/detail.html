@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.title }} · CookingRecipe{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('recipes.index') }}">← {{ t("recipes.back") }}</a></p>
+
+<article>
+  <header>
+    <h1>{{ recipe.title }}</h1>
+    <p class="recipe-meta">
+      <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
+      {% if recipe.prep_minutes is not none %}<span>{{ t("recipes.prep", n=recipe.prep_minutes) }}</span>{% endif %}
+      {% if recipe.cook_minutes is not none %}<span>{{ t("recipes.cook", n=recipe.cook_minutes) }}</span>{% endif %}
+    </p>
+  </header>
+
+  <h2>{{ t("recipes.ingredients") }}</h2>
+  <ul class="ingredient-lines">
+    {% for line in lines %}
+      <li>
+        {% if line.quantity is not none %}<strong>{{ line.quantity|num }} {{ line.unit }}</strong>{% endif %}
+        <a href="{{ url_for('ingredients.edit', ingredient_id=line.ingredient_id) }}">{{ line.name }}</a>
+        {%- if line.note %}, <em>{{ line.note }}</em>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h2>{{ t("label.instructions") }}</h2>
+  <div class="prose">{{ recipe.instructions }}</div>
+
+  {% if recipe.notes %}
+    <h2>{{ t("label.notes") }}</h2>
+    <div class="prose">{{ recipe.notes }}</div>
+  {% endif %}
+
+  <footer class="actions">
+    <a href="{{ url_for('recipes.edit', recipe_id=recipe.id) }}" role="button">{{ t("btn.edit") }}</a>
+    <form method="post" action="{{ url_for('recipes.delete', recipe_id=recipe.id) }}"
+          data-confirm="{{ t('recipes.confirm_delete') }}">
+      <button type="submit" class="secondary">{{ t("btn.delete") }}</button>
+    </form>
+  </footer>
+</article>
+{% endblock %}

@@ -2,10 +2,12 @@
 
 from flask import Blueprint, redirect, request
 
+from services.forms import format_number
 from translations import TEXTS
 
 # Code -> label in the switch. Each label is written in its own language, so it is never translated.
 LANGUAGES = {"en": "EN", "bg": "БГ"}
+DECIMAL_SEPARATORS = {"en": ".", "bg": ","}
 DEFAULT_LANG = "en"
 COOKIE_NAME = "lang"
 COOKIE_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
@@ -31,6 +33,11 @@ def t(key, **params):
     return text.format(**params) if params else text
 
 
+def num(x):
+    """A number with the current language's decimal separator: 0.5 -> "0,5" in Bulgarian."""
+    return format_number(x, DECIMAL_SEPARATORS[get_lang()])
+
+
 def _safe_next(url):
     """Only allow redirects to a path on this site, never to another host."""
     if url and url.startswith("/") and not url.startswith("//") and "\\" not in url:
@@ -50,6 +57,7 @@ def set_language():
 def init_app(app):
     app.register_blueprint(bp)
     app.jinja_env.globals.update(t=t, languages=LANGUAGES)
+    app.jinja_env.filters["num"] = num
 
     @app.context_processor
     def inject_lang():

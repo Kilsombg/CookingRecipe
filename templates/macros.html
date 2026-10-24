@@ -1,0 +1,8 @@
+{# Pico shows an input with aria-invalid in red, and colours the <small> right after it. #}
+{% macro invalid(error) %}{% if error %}aria-invalid="true"{% endif %}{% endmacro %}
+
+{% macro error_text(error) %}{% if error %}<small>{{ t(error) }}</small>{% endif %}{% endmacro %}
+
+{% macro form_errors_notice(errors) %}
+  {% if errors %}<p class="flash flash-error" role="alert">{{ t("msg.fix_errors") }}</p>{% endif %}
+{% endmacro %}

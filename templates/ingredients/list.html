@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t("ingredients.title") }} · CookingRecipe{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ t("ingredients.title") }}</h1>
+  <a href="{{ url_for('ingredients.new') }}" role="button">{{ t("ingredients.new") }}</a>
+</div>
+
+<form method="get" action="{{ url_for('ingredients.index') }}" role="search">
+  <input type="search" name="q" value="{{ q }}" placeholder="{{ t('ingredients.search_placeholder') }}"
+         aria-label="{{ t('ingredients.search_placeholder') }}">
+  <button type="submit">{{ t("btn.search") }}</button>
+</form>
+
+{% if ingredients %}
+  <table>
+    <thead>
+      <tr>
+        <th>{{ t("label.name") }}</th>
+        <th>{{ t("ingredients.col_used_in") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ingredient in ingredients %}
+        <tr>
+          <td><a href="{{ url_for('ingredients.edit', ingredient_id=ingredient.id) }}">{{ ingredient.name }}</a></td>
+          <td>{{ ingredient.recipe_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% elif q %}
+  <p>{{ t("ingredients.no_results", q=q) }}</p>
+{% else %}
+  <p>{{ t("ingredients.empty") }}</p>
+{% endif %}
+{% endblock %}

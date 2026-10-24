@@ -56,10 +56,12 @@ CookingRecipe/
 │   └── shopping.py        # shopping list from a menu
 ├── services/
 │   ├── text.py            # name_key() / casefold helpers for Cyrillic
+│   ├── forms.py           # form parsing/validation (numbers accept "0,5" and "0.5"), errors as translation keys
 │   ├── macros.py          # grams conversion, recipe and menu macro totals
 │   └── shopping_list.py   # merging and scaling ingredients
 ├── templates/
-│   ├── base.html          # layout, navigation, <meta charset="utf-8">
+│   ├── base.html          # layout, navigation, flash messages, <meta charset="utf-8">
+│   ├── macros.html        # form error helpers
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
@@ -154,9 +156,10 @@ A small home-made solution, with no extra dependency (Flask-Babel and `.po` file
 - **Templates**: `base.html` sets `<html lang="{{ lang }}">` and shows the `EN | БГ` switch in the navigation. No UI text is written directly in a template; it always goes through `t()`.
 - **Python code**: flash messages and validation errors use `t()` too.
 - **JavaScript**: confirmation texts are passed from the template in `data-` attributes (`data-confirm="{{ t('recipes.confirm_delete') }}"`), so `app.js` has no texts of its own.
+- **Numbers** are shown with the language's decimal separator through the `num` Jinja filter (`0.5` → `0,5` in Bulgarian). Forms accept either separator.
 - **Stored values stay language-neutral**: meals are stored as `breakfast`/`lunch`/… and days as `0`–`6`, and are shown through `t("meal." + meal)` and `t("day." + day)`. Changing the language never touches the database.
 
-A test checks that `en` and `bg` in `translations.py` have exactly the same keys.
+Tests check that `en` and `bg` in `translations.py` have exactly the same keys, and that every key used in templates, routes and `services/forms.py` exists.
 
 ## Photo handling
 
@@ -192,4 +195,4 @@ python app.py
   - `text.py`: Cyrillic case folding (`"  Пилешко   ФИЛЕ " → "пилешко филе"`)
 - `translations.py`: English and Bulgarian have the same set of keys. `i18n.py`: fallback to English, unknown cookie value, placeholders.
 - `db.py` tests use a temporary SQLite file. They check that all migrations apply cleanly to an empty database, and that Bulgarian text is saved and loaded correctly.
-- Pages are checked by hand in the browser. There are no UI tests; it's a personal tool.
+- `tests/test_routes.py` drives the main flows through Flask's test client (create/edit/delete, validation errors, blocked ingredient delete). Layout and JavaScript are checked by hand in the browser.
