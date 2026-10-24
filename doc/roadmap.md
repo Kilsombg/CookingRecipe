@@ -3,11 +3,11 @@
 Each milestone ends with something you can actually use. Work through them in order.
 
 ## M0 — Project setup
-- [ ] `git init`, `.gitignore` (`.venv/`, `recipes.db`, `images/`, `backups/`, `__pycache__/`)
-- [ ] Virtual environment, `requirements.txt` (`flask`, `pillow`, `pytest`)
-- [ ] `app.py` with a "Здравей" page on `localhost:5000` (checks that Cyrillic displays correctly)
-- [ ] `base.html` layout with Pico.css, UTF-8, and navigation (Recipes · Ingredients · Menus)
-- [ ] `start.bat`
+- [x] `git init`, `.gitignore` (`.venv/`, `recipes.db`, `images/`, `backups/`, `__pycache__/`)
+- [x] Virtual environment, `requirements.txt` (`flask`, `pillow`, `pytest`)
+- [x] `app.py` with a "Здравей" page on `localhost:5000` (checks that Cyrillic displays correctly)
+- [x] `base.html` layout with Pico.css, UTF-8, and navigation (Recipes · Ingredients · Menus)
+- [x] `start.bat`
 
 ## M1 — Database and migrations
 - [ ] `migrations/0001_initial.sql` (all tables + starting units)
