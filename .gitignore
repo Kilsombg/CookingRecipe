@@ -1,0 +1,6 @@
+.venv/
+recipes.db
+images/
+backups/
+__pycache__/
+.pytest_cache/

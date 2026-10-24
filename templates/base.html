@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Рецепти{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul>
+        <li><strong><a href="/" class="contrast">CookingRecipe</a></strong></li>
+      </ul>
+      <ul>
+        <li><a href="/recipes">Recipes</a></li>
+        <li><a href="/ingredients">Ingredients</a></li>
+        <li><a href="/menus">Menus</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
