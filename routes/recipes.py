@@ -3,7 +3,7 @@
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
 import db
-from i18n import num, t
+from i18n import num, safe_next, t
 from services import photos
 from services.forms import RECIPE_FIELDS, ROW_FIELDS, parse_recipe
 from services.macros import recipe_macros
@@ -150,7 +150,12 @@ def update(recipe_id):
 def favourite(recipe_id):
     _load(recipe_id)
     db.set_favourite(db.get_db(), recipe_id, request.form.get("favourite") == "1")
-    return redirect(url_for(".detail", recipe_id=recipe_id))
+    # app.js saves the list's card star without reloading; it flips the star itself
+    if request.headers.get("X-Requested-With") == "fetch":
+        return "", 204
+    # Without JavaScript the card star sends ?next= so the list (with its filters) comes back
+    next_url = request.form.get("next")
+    return redirect(safe_next(next_url) if next_url else url_for(".detail", recipe_id=recipe_id))
 
 
 @bp.post("/<int:recipe_id>/delete")

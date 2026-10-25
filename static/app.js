@@ -34,6 +34,44 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// <form data-favourite> (the star on a recipe card) saves without reloading the page, then flips the star.
+// If saving fails, the star stays as it was and data-favourite-error is shown.
+document.addEventListener("submit", async (event) => {
+  const form = event.target;
+  if (form.dataset.favourite === undefined || event.defaultPrevented) {
+    return;
+  }
+  event.preventDefault();
+  const button = form.querySelector("button[name=favourite]");
+  if (button.disabled) {
+    return;
+  }
+  const on = button.value === "1";
+  button.disabled = true;
+  try {
+    const response = await fetch(form.action, {
+      method: "POST",
+      body: new URLSearchParams({ favourite: button.value }),
+      headers: { "X-Requested-With": "fetch" },
+    });
+    if (!response.ok) {
+      throw new Error(response.status);
+    }
+  } catch {
+    alert(form.dataset.favouriteError);
+    return;
+  } finally {
+    button.disabled = false;
+  }
+  const label = on ? button.dataset.labelOn : button.dataset.labelOff;
+  button.value = on ? "0" : "1";
+  button.classList.toggle("is-favourite", on);
+  button.querySelector("svg").classList.toggle("filled", on);
+  button.setAttribute("aria-pressed", on);
+  button.title = label;
+  button.setAttribute("aria-label", label);
+});
+
 // <input type="checkbox" data-toggle-url="..."> saves its tick without reloading the page.
 // If saving fails, the tick is undone and the message from the nearest [data-toggle-error] is shown.
 document.addEventListener("change", async (event) => {

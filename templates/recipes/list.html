@@ -43,12 +43,13 @@
 </div>
 
 {% if recipes %}
+  {% set list_url = request.full_path if request.query_string else request.path %}
   {# A restaurant-menu page: plates alternate left and right, flowing in two columns on a wide screen. #}
   <div class="dish-list">
     {% for recipe in recipes %}
       {% set recipe_macros = macros[recipe.id] %}
       {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
-      <article class="dish">
+      <article class="dish" id="recipe-{{ recipe.id }}">
         <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}" class="dish-plate" tabindex="-1" aria-hidden="true">
           {% if recipe.photo_filename %}
             <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="" loading="lazy">
@@ -59,8 +60,19 @@
         <div class="dish-body">
           <h2 class="dish-name">
             <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
-            {% if recipe.is_favourite %}<span class="favourite-star" title="{{ t('recipes.favourite') }}"
-                                              aria-label="{{ t('recipes.favourite') }}">{{ icon("star", "filled") }}</span>{% endif %}
+            {# A favourite always shows its star; the others show an empty one while the card is hovered. #}
+            {# app.js saves it without reloading and swaps the labels from data-label-on/off. #}
+            {% set label = t("recipes.favourite") if recipe.is_favourite else t("recipes.add_favourite") %}
+            <form method="post" action="{{ url_for('recipes.favourite', recipe_id=recipe.id) }}" class="card-favourite"
+                  data-favourite data-favourite-error="{{ t('recipes.error_save_favourite') }}">
+              <input type="hidden" name="next" value="{{ list_url }}#recipe-{{ recipe.id }}">
+              <button type="submit" name="favourite" value="{{ '0' if recipe.is_favourite else '1' }}"
+                      class="favourite-star{% if recipe.is_favourite %} is-favourite{% endif %}"
+                      aria-pressed="{{ 'true' if recipe.is_favourite else 'false' }}" title="{{ label }}" aria-label="{{ label }}"
+                      data-label-on="{{ t('recipes.favourite') }}" data-label-off="{{ t('recipes.add_favourite') }}">
+                {{- icon("star", "filled" if recipe.is_favourite else "") -}}
+              </button>
+            </form>
           </h2>
           <p class="dish-facts">
             <span title="{{ t('label.servings') }}">{{ icon("users") }} {{ recipe.servings }}</span>

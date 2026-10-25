@@ -515,7 +515,23 @@ def test_favourite_toggle_card_star_and_filter(app, client):
     assert response.headers["Location"] == f"/recipes/{lunch}"
     assert 'aria-pressed="true"' in client.get(f"/recipes/{lunch}").get_data(as_text=True)
     page = client.get("/recipes").get_data(as_text=True)
-    assert 'href="/recipes?fav=1"' in page and page.count('class="favourite-star"') == 1
+    assert 'href="/recipes?fav=1"' in page and page.count('class="favourite-star is-favourite"') == 1
+    assert page.count('class="favourite-star"') == 1   # the other card offers an empty star
+
+    # The card star comes back to the list it was clicked on, never to another site
+    omelette = query(app, db.list_recipes, "Омлет")[0]["id"]
+    response = client.post(f"/recipes/{omelette}/favourite",
+                           data={"favourite": "1", "next": f"/recipes?q=x#recipe-{omelette}"})
+    assert response.headers["Location"] == f"/recipes?q=x#recipe-{omelette}"
+    response = client.post(f"/recipes/{omelette}/favourite", data={"favourite": "0", "next": "//evil.example"})
+    assert response.headers["Location"] == "/"
+
+    # app.js saves it without a reload: no redirect, just "done"
+    response = client.post(f"/recipes/{omelette}/favourite", data={"favourite": "1"},
+                           headers={"X-Requested-With": "fetch"})
+    assert response.status_code == 204
+    assert query(app, db.get_recipe, omelette)["is_favourite"]
+    client.post(f"/recipes/{omelette}/favourite", data={"favourite": "0"})
 
     page = client.get("/recipes?fav=1").get_data(as_text=True)
     assert "Пиле с ориз" in page and "Омлет" not in page

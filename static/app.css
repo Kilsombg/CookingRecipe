@@ -636,8 +636,39 @@ thead th {
   color: var(--paprika);
 }
 
-.favourite-star {
+/* The card star: always there on a favourite, an empty one appears on hover (always shown on touch screens) */
+.card-favourite {
+  display: inline;
+  margin: 0;
+}
+
+button.favourite-star {
+  display: inline-flex;
+  width: auto;
+  margin: 0 0 0 0.2rem;
+  padding: 0.1rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
   color: var(--gold);
+  vertical-align: middle;
+  visibility: hidden;
+}
+
+button.favourite-star.is-favourite,
+.dish:hover button.favourite-star,
+.dish:has(:focus-visible) button.favourite-star {
+  visibility: visible;
+}
+
+button.favourite-star:hover {
+  transform: scale(1.15);
+}
+
+@media (hover: none) {
+  button.favourite-star {
+    visibility: visible;
+  }
 }
 
 .dish-facts {
