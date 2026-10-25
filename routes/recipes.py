@@ -1,4 +1,6 @@
-"""Recipes: paged card list with search, tag and favourites filter, detail, create/edit/delete, favourite, photo upload."""
+"""Recipes: paged card list with search, tag and favourites filter, detail, create/edit/delete, favourite, photo upload.
+
+A new recipe can start from an entry on the "to cook" list (routes/wanted.py), and saving it takes that entry off."""
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
@@ -35,13 +37,19 @@ def _submitted():
     return fields, rows
 
 
+def _wanted_id():
+    """The wanted recipe a new recipe form was opened from: ?wanted= on the link, then a hidden field. Or None."""
+    return request.values.get("wanted", type=int)
+
+
 def _render_form(recipe, fields, rows, errors, status=200):
     conn = db.get_db()
     photo_dropped = bool(errors) and bool(request.files.get("photo"))  # browsers can't refill a file input
     return render_template("recipes/form.html", recipe=recipe, form=fields,
                            rows=rows or [_blank_row()], blank_row=_blank_row(), errors=errors,
                            photo_dropped=photo_dropped, remove_photo=request.form.get("remove_photo") == "1",
-                           units=db.list_units(conn), ingredient_names=db.ingredient_names(conn)), status
+                           units=db.list_units(conn), ingredient_names=db.ingredient_names(conn),
+                           wanted_id=None if recipe else _wanted_id()), status
 
 
 def _uploaded_photo():
@@ -90,6 +98,9 @@ def _save(recipe_id=None):
         photos.delete_photo(images_dir, old_photo)
 
     flash(t("recipes.msg_updated" if existing else "recipes.msg_created", title=recipe["title"]), "success")
+    if not existing:
+        for name in db.remove_cooked_wanted(conn, recipe["title"], _wanted_id()):
+            flash(t("wanted.msg_cooked", name=name), "success")
     return redirect(url_for(".detail", recipe_id=recipe_id))
 
 
@@ -112,6 +123,9 @@ def index():
 @bp.get("/new")
 def new():
     fields = dict.fromkeys(RECIPE_FIELDS, "") | {"servings": "1"}
+    wanted = db.get_wanted(db.get_db(), _wanted_id()) if _wanted_id() else None
+    if wanted:
+        fields |= {"title": wanted["name"], "source_url": wanted["source_url"] or "", "notes": wanted["notes"] or ""}
     return _render_form(None, fields, [_blank_row() for _ in range(NEW_FORM_ROWS)], {})
 
 

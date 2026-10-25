@@ -31,6 +31,7 @@ recipes     1───* recipe_ingredients *───1 ingredients
 recipes     *───* tags              (through recipe_tags)
 menus       1───* menu_items *───1 recipes
 menus       1───* shopping_items
+wanted_recipes                      (on its own)
 ```
 
 ## Tables
@@ -155,6 +156,18 @@ A saved copy of a menu's shopping list. It is saved, rather than calculated ever
 | checked | INTEGER | no | 0/1, default 0 |
 | is_manual | INTEGER | no | 1 = added by hand; kept when the list is rebuilt |
 
+### `wanted_recipes`
+
+Recipes you want to cook some day, before they are written down. Added by `0003_add_wanted_recipes.sql`. Saving a new recipe deletes the entries with the same name (ignoring case), and the entry the recipe form was opened from. Names are unique ignoring case (checked by the form).
+
+| Column | Type | Null? | Notes |
+|--------|------|-------|-------|
+| id | INTEGER PK | no | |
+| name | TEXT | no | |
+| source_url | TEXT | yes | Where you saw it; an http(s) link |
+| notes | TEXT | yes | |
+| created_at | TEXT | no | |
+
 ## Calculations
 
 ### Grams of one ingredient line
@@ -211,6 +224,7 @@ Every change to the database structure is a numbered SQL file in the `migrations
 migrations/
 ├── 0001_initial.sql          # all tables + starting units
 ├── 0002_add_favourite.sql    # recipes.is_favourite
+├── 0003_add_wanted_recipes.sql # wanted_recipes
 └── ...
 ```
 

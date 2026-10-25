@@ -65,6 +65,10 @@ Each milestone ends with something you can actually use. Work through them in or
 - [x] Copy a menu ("repeat last week"), without its shopping list
 - [x] Export everything except photos and shopping lists as one JSON file; import adds what isn't here yet (by name), after a backup
 
+## M10 — Recipes to cook
+- [x] `0003_add_wanted_recipes.sql`: a list of recipes to cook (name, link, notes), "To cook" in the navigation
+- [x] A name opens the new recipe form filled from it; saving the recipe takes it off the list
+
 ## Later (pick any)
 - "Last cooked" date, and sorting by it
 - Density per ingredient for more accurate volume units

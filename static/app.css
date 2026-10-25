@@ -1264,6 +1264,56 @@ legend > .icon {
 }
 
 /* Units page: one form per unit — name, grams, how many recipes use it, save, delete */
+/* Recipes to cook: the name opens the new recipe form; edit form folded under each entry */
+.wanted-list {
+  padding: 0;
+}
+
+.wanted-list li {
+  list-style: none;
+  padding: 0.5rem 0;
+  border-bottom: 1px dotted var(--paper-edge);
+}
+
+.wanted-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
+.wanted-name {
+  font-family: var(--menu-font);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wanted-name .icon {
+  color: var(--paprika);
+}
+
+.wanted-source {
+  font-size: 0.875em;
+}
+
+.wanted-notes {
+  margin: 0.25rem 0;
+  white-space: pre-line;
+  color: var(--pico-muted-color);
+}
+
+.wanted-list details {
+  margin: 0.25rem 0 0;
+}
+
+.wanted-list summary {
+  font-size: 0.875em;
+  color: var(--pico-muted-color);
+}
+
 .unit-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto auto;

@@ -35,8 +35,8 @@ def recipe_form(**overrides):
 
 
 @pytest.mark.parametrize("lang", ["en", "bg"])
-@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/ingredients", "/ingredients/new", "/menus", "/units",
-                                 "/data"])
+@pytest.mark.parametrize("url", ["/recipes", "/recipes/new", "/wanted", "/ingredients", "/ingredients/new", "/menus",
+                                 "/units", "/data"])
 def test_pages_render(client, url, lang):
     client.set_cookie("lang", lang)
     assert client.get(url).status_code == 200
@@ -537,6 +537,73 @@ def test_invalid_unit_keeps_what_was_typed(app, client):
     assert response.status_code == 400
     assert response.get_data(as_text=True).count('value="кг"') == 2   # the edited row and the real кг
     assert client.post(f"/units/{grams_id}", data={"name": "г", "grams": "1"}).status_code == 302
+
+
+def wanted_form(**overrides):
+    return {"name": "Мусака", "source_url": "youtube.com/watch?v=1", "notes": "С много лук"} | overrides
+
+
+def test_add_edit_and_delete_wanted_recipe(app, client):
+    client.set_cookie("lang", "bg")
+    response = client.post("/wanted", data=wanted_form())
+    assert response.headers["Location"] == "/wanted"
+    page = client.get("/wanted").get_data(as_text=True)
+    assert "„Мусака“ е добавена в рецептите за готвене." in page
+    moussaka = query(app, db.find_wanted, "мусака")
+    assert dict(moussaka) == {"id": moussaka["id"], "name": "Мусака",
+                              "source_url": "https://youtube.com/watch?v=1", "notes": "С много лук"}
+    assert f'href="/recipes/new?wanted={moussaka["id"]}"' in page
+
+    client.post(f"/wanted/{moussaka['id']}", data=wanted_form(name="Мусака с картофи", source_url="", notes=""))
+    assert dict(query(app, db.get_wanted, moussaka["id"])) == {"id": moussaka["id"], "name": "Мусака с картофи",
+                                                              "source_url": None, "notes": None}
+
+    client.post(f"/wanted/{moussaka['id']}/delete")
+    assert query(app, db.list_wanted) == []
+    assert client.post("/wanted/999", data=wanted_form()).status_code == 404
+
+
+def test_invalid_wanted_recipe_keeps_what_was_typed(app, client):
+    client.post("/wanted", data=wanted_form())
+    response = client.post("/wanted", data=wanted_form(name="  мусака ", source_url="not a link"))
+    assert response.status_code == 400
+    page = response.get_data(as_text=True)
+    assert "This recipe is already on the list." in page
+    assert "Enter a web address" in page
+    assert 'value="  мусака "' in page
+    assert client.post("/wanted", data=wanted_form(name="")).status_code == 400
+    assert len(query(app, db.list_wanted)) == 1
+
+
+def test_recipe_from_wanted_list_takes_it_off(app, client):
+    client.post("/wanted", data=wanted_form())
+    client.post("/wanted", data=wanted_form(name="Баница", source_url="", notes=""))
+    moussaka = query(app, db.find_wanted, "Мусака")["id"]
+
+    # The name opens the new recipe form filled from the entry
+    page = client.get(f"/recipes/new?wanted={moussaka}").get_data(as_text=True)
+    assert 'value="Мусака"' in page and 'value="https://youtube.com/watch?v=1"' in page
+    assert "С много лук</textarea>" in page
+    assert f'name="wanted" value="{moussaka}"' in page
+    assert 'href="/wanted"' in page   # Cancel goes back to the list
+    assert client.get("/recipes/new?wanted=999").status_code == 200
+
+    # A form with errors keeps the entry, so it can still be taken off when saved
+    response = client.post("/recipes", data=recipe_form(title="Мусака", instructions="", wanted=str(moussaka)))
+    assert f'name="wanted" value="{moussaka}"' in response.get_data(as_text=True)
+
+    # Saved under another title, the entry it was opened from goes
+    response = client.post("/recipes", data=recipe_form(title="Мусака по бабина рецепта", wanted=str(moussaka)),
+                           follow_redirects=True)
+    assert str(escape('"Мусака" was taken off the recipes to cook.')) in response.get_data(as_text=True)
+    assert [w["name"] for w in query(app, db.list_wanted)] == ["Баница"]
+
+    # A recipe with the same name as an entry takes it off too, ignoring case; editing a recipe doesn't
+    client.post("/wanted", data=wanted_form(name="Пиле с ориз", source_url="", notes=""))
+    client.post("/recipes/1", data=recipe_form(title="Пиле с ориз"))
+    assert query(app, db.find_wanted, "Пиле с ориз") is not None
+    client.post("/recipes", data=recipe_form(title="БАНИЦА"))
+    assert [w["name"] for w in query(app, db.list_wanted)] == ["Пиле с ориз"]
 
 
 def test_favourite_toggle_card_star_and_filter(app, client):

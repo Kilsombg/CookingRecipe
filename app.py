@@ -5,7 +5,7 @@ from flask import Flask, redirect, render_template, send_from_directory, url_for
 import config
 import db
 import i18n
-from routes import data, ingredients, menus, recipes, shopping, units
+from routes import data, ingredients, menus, recipes, shopping, units, wanted
 from services.forms import url_host
 from services.macros import MACROS
 from services.text import split_steps, tag_icon
@@ -35,6 +35,7 @@ def create_app(overrides=None):
     app.jinja_env.filters["tag_icon"] = tag_icon
     app.jinja_env.filters["steps"] = split_steps
     app.register_blueprint(recipes.bp)
+    app.register_blueprint(wanted.bp)
     app.register_blueprint(ingredients.bp)
     app.register_blueprint(units.bp)
     app.register_blueprint(menus.bp)

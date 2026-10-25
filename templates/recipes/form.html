@@ -32,6 +32,8 @@
 
 <form method="post" enctype="multipart/form-data"
       action="{{ url_for('recipes.update', recipe_id=recipe.id) if recipe else url_for('recipes.create') }}">
+  {# Opened from the "to cook" list: saving takes that entry off the list, even under another title #}
+  {% if wanted_id %}<input type="hidden" name="wanted" value="{{ wanted_id }}">{% endif %}
   <label>
     {{ t("label.title") }}
     <input name="title" value="{{ form.title }}" required {% if not recipe %}autofocus{% endif %}
@@ -121,7 +123,8 @@
 
   <div class="actions">
     <button type="submit">{{ icon("check") }} {{ t("btn.save") }}</button>
-    <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) if recipe else url_for('recipes.index') }}"
+    <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) if recipe
+               else url_for('wanted.index') if wanted_id else url_for('recipes.index') }}"
        role="button" class="secondary outline">{{ icon("x") }} {{ t("btn.cancel") }}</a>
   </div>
 </form>

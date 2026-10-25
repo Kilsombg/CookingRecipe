@@ -463,6 +463,53 @@ def delete_menu_item(conn, menu_id, item_id):
                             (item_id, menu_id)).rowcount > 0
 
 
+# --- Wanted recipes (recipes to cook some day) ---
+
+def list_wanted(conn):
+    """Every wanted recipe, oldest first."""
+    return conn.execute("SELECT id, name, source_url, notes FROM wanted_recipes ORDER BY id").fetchall()
+
+
+def get_wanted(conn, wanted_id):
+    return conn.execute("SELECT id, name, source_url, notes FROM wanted_recipes WHERE id = ?",
+                        (wanted_id,)).fetchone()
+
+
+def find_wanted(conn, name):
+    """The wanted recipe with this name, ignoring case, or None."""
+    return conn.execute("SELECT id, name, source_url, notes FROM wanted_recipes WHERE casefold(name) = casefold(?)",
+                        (name,)).fetchone()
+
+
+def create_wanted(conn, wanted):
+    """`wanted`: name, source_url and notes (both may be None)."""
+    with conn:
+        return conn.execute("INSERT INTO wanted_recipes (name, source_url, notes) VALUES (:name, :source_url, :notes)",
+                            wanted).lastrowid
+
+
+def update_wanted(conn, wanted_id, wanted):
+    with conn:
+        conn.execute("UPDATE wanted_recipes SET name = :name, source_url = :source_url, notes = :notes WHERE id = :id",
+                     {**wanted, "id": wanted_id})
+
+
+def delete_wanted(conn, wanted_id):
+    with conn:
+        conn.execute("DELETE FROM wanted_recipes WHERE id = ?", (wanted_id,))
+
+
+def remove_cooked_wanted(conn, title, wanted_id=None):
+    """A recipe called `title` was just added: remove the wanted recipes with that name (ignoring case)
+    and the one with `wanted_id` (the recipe form was opened from it, maybe under another title).
+    Returns the names removed."""
+    with conn:
+        rows = conn.execute("SELECT id, name FROM wanted_recipes WHERE casefold(name) = casefold(?) OR id = ?",
+                            (title, wanted_id)).fetchall()
+        conn.executemany("DELETE FROM wanted_recipes WHERE id = ?", [(row["id"],) for row in rows])
+    return [row["name"] for row in rows]
+
+
 # --- Shopping list ---
 # Names and units are copied in as text, so editing an ingredient later doesn't change the list.
 

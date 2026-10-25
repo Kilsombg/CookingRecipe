@@ -48,11 +48,13 @@ CookingRecipe/
 ├── translations.py        # UI texts: {"en": {...}, "bg": {...}}
 ├── migrations/            # numbered SQL files, applied in order on startup
 │   ├── 0001_initial.sql
-│   └── 0002_add_favourite.sql
+│   ├── 0002_add_favourite.sql
+│   └── 0003_add_wanted_recipes.sql
 ├── routes/
 │   ├── recipes.py         # recipe list, detail, create/edit/delete, photo upload
 │   ├── ingredients.py     # ingredient catalogue
 │   ├── units.py           # units page
+│   ├── wanted.py          # recipes to cook (name, link, notes)
 │   ├── menus.py           # menus and menu items
 │   ├── shopping.py        # shopping list from a menu
 │   └── data.py            # JSON export / import
@@ -71,6 +73,7 @@ CookingRecipe/
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
+│   ├── wanted/            # list.html (edit form under each entry, add form)
 │   ├── menus/             # list.html (with the new-menu form), detail.html (add recipe, rename)
 │   ├── shopping/          # list.html
 │   └── data/              # index.html (export / import)
@@ -97,8 +100,8 @@ CookingRecipe/
 |--------|-----|---------|
 | GET | `/` | Redirects to `/recipes` |
 | GET | `/recipes?q=&tag=&fav=1` | Recipe card grid. `q` searches titles and ingredient names (ignoring case); `tag` is a tag id; `fav=1` shows only favourites |
-| GET | `/recipes/new` | New recipe form |
-| POST | `/recipes` | Create a recipe (adds new ingredient names to the catalogue), with an optional photo |
+| GET | `/recipes/new?wanted=` | New recipe form. `wanted` (a recipe-to-cook id) fills in its name, link and notes |
+| POST | `/recipes` | Create a recipe (adds new ingredient names to the catalogue), with an optional photo. Takes off the recipes to cook with the same name (ignoring case) and the one in `wanted` |
 | GET | `/recipes/<id>` | Recipe detail with calculated macros |
 | GET | `/recipes/<id>/edit` | Edit form |
 | POST | `/recipes/<id>` | Update a recipe; a new photo replaces the old one, `remove_photo=1` removes it |
@@ -115,6 +118,10 @@ CookingRecipe/
 | POST | `/units` | Add a unit (name unique ignoring case; empty grams = a piece unit) |
 | POST | `/units/<id>` | Rename a unit or change its grams |
 | POST | `/units/<id>/delete` | Delete a unit, only if no recipe uses it |
+| GET | `/wanted` | Recipes to cook: each name links to `/recipes/new?wanted=<id>`, with an edit form under it, and an add form |
+| POST | `/wanted` | Add a recipe to cook (name unique ignoring case; link and notes optional) |
+| POST | `/wanted/<id>` | Edit a recipe to cook |
+| POST | `/wanted/<id>/delete` | Remove a recipe to cook |
 | GET | `/menus` | List of menus |
 | POST | `/menus` | Create a menu |
 | GET | `/menus/<id>?day=&meal=` | Menu detail, grouped by day/meal, with macro totals. `day`/`meal` preselect the add-recipe form (set after adding a recipe) |

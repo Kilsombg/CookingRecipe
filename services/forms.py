@@ -16,6 +16,7 @@ GRAM_MACRO_FIELDS = ("protein_100g", "carbs_100g", "fat_100g")
 MENU_ITEM_FIELDS = ("recipe_id", "day", "meal", "servings")
 SHOPPING_ITEM_FIELDS = ("name", "quantity", "unit")
 UNIT_FIELDS = ("name", "grams")
+WANTED_FIELDS = ("name", "source_url", "notes")
 DAYS = range(7)  # 0 = Monday … 6 = Sunday, as stored in menu_items.day
 MEALS = ("breakfast", "lunch", "dinner", "snack")  # stored in English, shown translated
 
@@ -278,3 +279,19 @@ def parse_unit(fields):
     if error:
         errors["grams"] = error
     return {"name": name, "grams": grams}, errors
+
+
+def parse_wanted(fields):
+    """Validate a wanted recipe form (add or edit).
+
+    fields: raw strings keyed by WANTED_FIELDS. The link and the notes are optional.
+    Returns (wanted, errors), with errors keyed by field name.
+    """
+    errors = {}
+    name = clean_name(fields.get("name"))
+    if name is None:
+        errors["name"] = "error.required"
+    source_url, error = parse_source_url(fields.get("source_url"))
+    if error:
+        errors["source_url"] = error
+    return {"name": name, "source_url": source_url, "notes": clean_text(fields.get("notes"))}, errors

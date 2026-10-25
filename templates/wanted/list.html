@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "macros.html" import invalid, error_text, form_errors_notice, icon %}
+
+{% block title %}{{ t("wanted.title") }} · CookingRecipe{% endblock %}
+
+{# Name, link and notes of one entry. `values` are the form's contents; `field_errors` are shown under each field. #}
+{% macro wanted_fields(values, field_errors) %}
+  <div class="grid">
+    <label>
+      {{ t("label.name") }}
+      <input name="name" value="{{ values.name }}" required {{ invalid(field_errors.name) }}>
+      {{ error_text(field_errors.name) }}
+    </label>
+    <label>
+      {{ icon("external") }} {{ t("label.source_url") }}
+      <input name="source_url" value="{{ values.source_url }}" type="text" inputmode="url"
+             placeholder="https://…" {{ invalid(field_errors.source_url) }}>
+      {{ error_text(field_errors.source_url) }}
+    </label>
+  </div>
+  <label>
+    {{ icon("note") }} {{ t("label.notes") }}
+    <textarea name="notes" rows="2">{{ values.notes }}</textarea>
+  </label>
+{% endmacro %}
+
+{% block content %}
+<h1>{{ t("wanted.title") }}</h1>
+{{ form_errors_notice(errors) }}
+<p>{{ t("wanted.help") }}</p>
+
+{% if wanted %}
+  <ul class="wanted-list">
+    {% for item in wanted %}
+      {% set editing = edit_id == item.id and typed %}
+      <li>
+        <div class="wanted-head">
+          <a href="{{ url_for('recipes.new', wanted=item.id) }}" class="wanted-name"
+             title="{{ t('wanted.cook_it') }}">{{ icon("bookmark") }} {{ item.name }}</a>
+          {% if item.source_url %}
+            <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer"
+               class="wanted-source">{{ item.source_url|host or item.source_url }} {{ icon("external") }}</a>
+          {% endif %}
+        </div>
+        {% if item.notes %}<p class="wanted-notes">{{ item.notes }}</p>{% endif %}
+        <details {% if editing %}open{% endif %}>
+          <summary>{{ icon("pencil") }} {{ t("btn.edit") }}</summary>
+          <form method="post" action="{{ url_for('wanted.update', wanted_id=item.id) }}">
+            {{ wanted_fields(typed if editing else {"name": item.name, "source_url": item.source_url or "",
+                                                    "notes": item.notes or ""},
+                             errors if editing else {}) }}
+            <div class="actions">
+              <button type="submit" class="secondary">{{ icon("check") }} {{ t("btn.save") }}</button>
+              <button type="submit" class="secondary outline" formaction="{{ url_for('wanted.delete', wanted_id=item.id) }}"
+                      formnovalidate data-confirm="{{ t('wanted.confirm_delete') }}">{{ icon("trash") }} {{ t("btn.delete") }}</button>
+            </div>
+          </form>
+        </details>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty-note">{{ t("wanted.empty") }}</p>
+{% endif %}
+
+<h2>{{ t("wanted.add") }}</h2>
+{% set adding = edit_id is none and typed %}
+<form method="post" action="{{ url_for('wanted.create') }}">
+  {{ wanted_fields(typed if adding else {"name": "", "source_url": "", "notes": ""}, errors if adding else {}) }}
+  <button type="submit">{{ icon("plus") }} {{ t("wanted.add_button") }}</button>
+</form>
+{% endblock %}
