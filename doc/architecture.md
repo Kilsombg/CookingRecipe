@@ -77,7 +77,7 @@ CookingRecipe/
 ├── static/
 │   ├── pico.min.css
 │   ├── app.css            # the app's look: honey/paper colours over Pico, menu-style recipe list, cookbook recipe page, print styles
-│   ├── app.js             # ingredient rows, shopping-list ticks
+│   ├── app.js             # ingredient rows (add, remove, drag to reorder), shopping-list ticks
 │   ├── icons.svg          # icon sprite (navigation, actions, recipe facts, macros, meals), used through icon() in macros.html
 │   └── placeholder.svg    # shown on recipe plates without a photo
 ├── images/                # uploaded photos (not committed to git)

@@ -6,6 +6,8 @@
 
 {% macro ingredient_row(row, error=none) %}
   <div class="ingredient-row" data-row>
+    <button type="button" class="secondary outline drag-handle" data-drag-handle
+            aria-label="{{ t('recipes.move_ingredient') }}" title="{{ t('recipes.move_ingredient') }}">{{ icon("grip") }}</button>
     <input name="ing_name" value="{{ row.name }}" list="ingredient-names" autocomplete="off"
            aria-label="{{ t('label.ingredient') }}" placeholder="{{ t('label.ingredient') }}" {{ invalid(error) }}>
     <input name="ing_quantity" value="{{ row.quantity }}" inputmode="decimal"

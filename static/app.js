@@ -34,6 +34,50 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// <button data-drag-handle> inside a [data-row] drags that row up or down among its siblings, with the
+// mouse or a finger; the form then sends the rows in their new order. Arrow up/down move it one place.
+document.addEventListener("pointerdown", (event) => {
+  const handle = event.target.closest("[data-drag-handle]");
+  if (!handle || event.button !== 0) {
+    return;
+  }
+  event.preventDefault();
+  const row = handle.closest("[data-row]");
+  const list = row.parentElement;
+  const move = (e) => {
+    // Put the row before the first other row whose middle is below the pointer, or last if there is none
+    const before = [...list.children].find((other) => {
+      const box = other.getBoundingClientRect();
+      return other !== row && e.clientY < box.top + box.height / 2;
+    }) ?? null;
+    if (before !== row.nextElementSibling) {
+      list.insertBefore(row, before);
+    }
+  };
+  handle.setPointerCapture(event.pointerId);
+  row.classList.add("dragging");
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("lostpointercapture", () => {
+    row.classList.remove("dragging");
+    handle.removeEventListener("pointermove", move);
+  }, { once: true });
+});
+
+document.addEventListener("keydown", (event) => {
+  const handle = event.target.closest("[data-drag-handle]");
+  if (!handle || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+    return;
+  }
+  event.preventDefault();
+  const row = handle.closest("[data-row]");
+  if (event.key === "ArrowUp") {
+    row.previousElementSibling?.before(row);
+  } else {
+    row.nextElementSibling?.after(row);
+  }
+  handle.focus();  // moving the row in the page drops the focus
+});
+
 // <form data-favourite> (the star on a recipe card) saves without reloading the page, then flips the star.
 // If saving fails, the star stays as it was and data-favourite-error is shown.
 document.addEventListener("submit", async (event) => {

@@ -88,6 +88,22 @@ def test_edit_and_delete_recipe(app, client):
     assert client.get(f"/recipes/{recipe_id}").status_code == 404
 
 
+def test_recipe_keeps_ingredient_order(app, client):
+    # Dragging rows on the form only changes the order they are sent in
+    client.post("/recipes", data=recipe_form(ing_name=["Сол", "Пилешко филе", "Магданоз"],
+                                             ing_quantity=["", "0,5", ""], ing_unit=["", "2", ""],
+                                             ing_note=["", "", ""]))
+    recipe_id = query(app, db.list_recipes)[0]["id"]
+    assert [r["name"] for r in query(app, db.get_recipe_lines, recipe_id)] == ["Сол", "Пилешко филе", "Магданоз"]
+
+    client.post(f"/recipes/{recipe_id}", data=recipe_form(ing_name=["Пилешко филе", "Сол", "Магданоз"],
+                                                          ing_quantity=["0,5", "", ""], ing_unit=["2", "", ""],
+                                                          ing_note=["", "", ""]))
+    assert [r["name"] for r in query(app, db.get_recipe_lines, recipe_id)] == ["Пилешко филе", "Сол", "Магданоз"]
+    form = client.get(f"/recipes/{recipe_id}/edit").get_data(as_text=True)
+    assert form.index('value="Пилешко филе"') < form.index('value="Сол"') < form.index('value="Магданоз"')
+
+
 def test_ingredient_crud(app, client):
     client.post("/ingredients", data={"name": " Яйца "})
     response = client.post("/ingredients", data={"name": "яйца"})

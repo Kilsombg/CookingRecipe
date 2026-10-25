@@ -1081,10 +1081,10 @@ legend > .icon {
   color: var(--paprika);
 }
 
-/* Ingredient rows on the recipe form: name, quantity, unit, note, remove */
+/* Ingredient rows on the recipe form: drag handle, name, quantity, unit, note, remove */
 .ingredient-row {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr 2fr auto;
+  grid-template-columns: auto 3fr 1fr 1fr 2fr auto;
   gap: 0.5rem;
   align-items: start;
   margin-bottom: 0.5rem;
@@ -1105,14 +1105,34 @@ legend > .icon {
   color: var(--pico-del-color);
 }
 
+/* touch-action keeps a finger on the handle from scrolling the page while dragging */
+.ingredient-row > .drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.ingredient-row.dragging {
+  opacity: 0.6;
+  user-select: none;
+}
+
+.ingredient-row.dragging > .drag-handle {
+  cursor: grabbing;
+}
+
 @media (max-width: 576px) {
   .ingredient-row {
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: auto 1fr 1fr auto;
+  }
+
+  .ingredient-row > .drag-handle {
+    grid-column: 1;
+    grid-row: span 3;
   }
 
   .ingredient-row > [name="ing_name"],
   .ingredient-row > [name="ing_note"] {
-    grid-column: 1 / -1;
+    grid-column: 2 / -1;
   }
 }
 
