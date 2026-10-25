@@ -1,78 +1,82 @@
 {% extends "base.html" %}
+{% from "macros.html" import icon, macro_badges %}
 
 {% block title %}{{ t("recipes.title") }} · CookingRecipe{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1>{{ t("recipes.title") }}</h1>
-  <a href="{{ url_for('recipes.new') }}" role="button">{{ t("recipes.new") }}</a>
+
+  {# Search, category and "new" are kept small, so the recipes get the attention. #}
+  <div class="toolbar">
+    <form method="get" action="{{ url_for('recipes.index') }}" role="search" class="search-box">
+      {% if tag %}<input type="hidden" name="tag" value="{{ tag.id }}">{% endif %}
+      {% if favourites %}<input type="hidden" name="fav" value="1">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="{{ t('recipes.search_placeholder') }}"
+             aria-label="{{ t('recipes.search_placeholder') }}">
+      <button type="submit" aria-label="{{ t('btn.search') }}" title="{{ t('btn.search') }}">{{ icon("search") }}</button>
+    </form>
+
+    {# Favourites work like one more category: choosing it or a tag replaces the other. #}
+    {% if tags or has_favourites or favourites %}
+      <details class="dropdown category-menu">
+        <summary aria-label="{{ t('recipes.category') }}">
+          {% if favourites %}{{ icon("star", "filled") }} {{ t("recipes.favourites") }}
+          {% elif tag %}{{ icon(tag.name|tag_icon) }} {{ tag.name }}
+          {% else %}{{ icon("filter") }} {{ t("recipes.category") }}{% endif %}
+        </summary>
+        <ul>
+          <li><a href="{{ url_for('recipes.index', q=q or none) }}"
+                 {% if not tag and not favourites %}aria-current="true"{% endif %}>{{ icon("grid") }} {{ t("recipes.all_tags") }}</a></li>
+          <li><a href="{{ url_for('recipes.index', q=q or none, fav=1) }}"
+                 {% if favourites %}aria-current="true"{% endif %}>{{ icon("star", "filled") }} {{ t("recipes.favourites") }}</a></li>
+          {% for item in tags %}
+            <li><a href="{{ url_for('recipes.index', q=q or none, tag=item.id) }}"
+                   {% if tag and tag.id == item.id %}aria-current="true"{% endif %}>{{ icon(item.name|tag_icon) }} {{ item.name }}</a></li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+    <a href="{{ url_for('recipes.new') }}" role="button" class="btn-small">{{ icon("plus") }} {{ t("recipes.new") }}</a>
+  </div>
 </div>
 
-<form method="get" action="{{ url_for('recipes.index') }}" role="search">
-  {% if tag %}<input type="hidden" name="tag" value="{{ tag.id }}">{% endif %}
-  {% if favourites %}<input type="hidden" name="fav" value="1">{% endif %}
-  <input type="search" name="q" value="{{ q }}" placeholder="{{ t('recipes.search_placeholder') }}"
-         aria-label="{{ t('recipes.search_placeholder') }}">
-  <button type="submit">{{ t("btn.search") }}</button>
-</form>
-
-{# Favourites work like one more tag: choosing it or a tag replaces the other. #}
-{% if tags or has_favourites or favourites %}
-  <nav class="tag-filter" aria-label="{{ t('label.tags') }}">
-    <a href="{{ url_for('recipes.index', q=q or none) }}" class="tag"
-       {% if not tag and not favourites %}aria-current="true"{% endif %}>{{ t("recipes.all_tags") }}</a>
-    <a href="{{ url_for('recipes.index', q=q or none, fav=1) }}" class="tag"
-       {% if favourites %}aria-current="true"{% endif %}>★ {{ t("recipes.favourites") }}</a>
-    {% for item in tags %}
-      <a href="{{ url_for('recipes.index', q=q or none, tag=item.id) }}" class="tag"
-         {% if tag and tag.id == item.id %}aria-current="true"{% endif %}>{{ item.name }}</a>
-    {% endfor %}
-  </nav>
-{% endif %}
-
 {% if recipes %}
-  <div class="card-grid">
+  {# A restaurant-menu page: plates alternate left and right, flowing in two columns on a wide screen. #}
+  <div class="dish-list">
     {% for recipe in recipes %}
-      <article class="recipe-card">
-        <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}" class="card-photo" tabindex="-1" aria-hidden="true">
+      {% set recipe_macros = macros[recipe.id] %}
+      {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
+      <article class="dish">
+        <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}" class="dish-plate" tabindex="-1" aria-hidden="true">
           {% if recipe.photo_filename %}
             <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="" loading="lazy">
           {% else %}
             <img src="{{ url_for('static', filename='placeholder.svg') }}" alt="">
           {% endif %}
         </a>
-        <h3>
-          {% if recipe.is_favourite %}<span class="favourite-star" title="{{ t('recipes.favourite') }}"
-                                            aria-label="{{ t('recipes.favourite') }}">★</span>{% endif %}
-          <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
-        </h3>
-        <p class="recipe-meta">
-          <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
-          {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
-          {% if total %}<span>{{ t("recipes.total_time", n=total) }}</span>{% endif %}
-          {% set recipe_macros = macros[recipe.id] %}
-          {% set calories = recipe_macros.per_serving.calories %}
-          {% if calories is not none %}
-            {% if recipe_macros.incomplete %}
-              <span title="{{ t('recipes.card_kcal_partial_hint') }}">{{ t("recipes.card_kcal_partial", n=calories|round|num) }}</span>
-            {% else %}
-              <span>{{ t("recipes.card_kcal", n=calories|round|num) }}</span>
-            {% endif %}
-          {% endif %}
-        </p>
-        {% if recipe_tags[recipe.id] %}
-          <p class="tag-list">
+        <div class="dish-body">
+          <h2 class="dish-name">
+            <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
+            {% if recipe.is_favourite %}<span class="favourite-star" title="{{ t('recipes.favourite') }}"
+                                              aria-label="{{ t('recipes.favourite') }}">{{ icon("star", "filled") }}</span>{% endif %}
+          </h2>
+          <p class="dish-facts">
+            <span title="{{ t('label.servings') }}">{{ icon("users") }} {{ recipe.servings }}</span>
+            {% if total %}<span title="{{ t('recipes.stat_total') }}">{{ icon("clock") }} {{ t("recipes.total_time", n=total) }}</span>{% endif %}
             {% for item in recipe_tags[recipe.id] %}
-              <a href="{{ url_for('recipes.index', tag=item.id) }}" class="tag">{{ item.name }}</a>
+              <a href="{{ url_for('recipes.index', tag=item.id) }}" class="tag">{{ icon(item.name|tag_icon) }} {{ item.name }}</a>
             {% endfor %}
           </p>
-        {% endif %}
+          {{ macro_badges(recipe_macros.per_serving, recipe_macros.incomplete) }}
+        </div>
       </article>
     {% endfor %}
   </div>
 {% elif q or tag or favourites %}
-  <p>{{ t("recipes.no_results") }}</p>
+  <p class="empty-note">{{ t("recipes.no_results") }}</p>
 {% else %}
-  <p>{{ t("recipes.empty") }}</p>
+  <p class="empty-note">{{ t("recipes.empty") }}</p>
 {% endif %}
 {% endblock %}

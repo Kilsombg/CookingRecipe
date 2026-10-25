@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import invalid, error_text, form_errors_notice %}
+{% from "macros.html" import invalid, error_text, form_errors_notice, icon %}
 
 {% block title %}{{ t("shopping.title") }} · {{ menu.name }} · CookingRecipe{% endblock %}
 
@@ -16,21 +16,21 @@
     {% if item.is_manual %}
       <form method="post" action="{{ url_for('shopping.delete_item', item_id=item.id) }}" class="no-print">
         <button type="submit" class="secondary outline"
-                aria-label="{{ t('shopping.remove_item') }}" title="{{ t('shopping.remove_item') }}">×</button>
+                aria-label="{{ t('shopping.remove_item') }}" title="{{ t('shopping.remove_item') }}">{{ icon("x") }}</button>
       </form>
     {% endif %}
   </li>
 {% endmacro %}
 
 {% block content %}
-<p class="no-print"><a href="{{ url_for('menus.detail', menu_id=menu.id) }}">← {{ menu.name }}</a></p>
+<p class="no-print"><a href="{{ url_for('menus.detail', menu_id=menu.id) }}" class="back-link">{{ icon("arrow-left") }} {{ menu.name }}</a></p>
 
 <div class="page-head">
   <hgroup>
-    <h1>{{ t("shopping.title") }}</h1>
-    <p>{{ menu.name }}</p>
+    <h1>{{ icon("cart") }} {{ t("shopping.title") }}</h1>
+    <p>{{ icon("calendar") }} {{ menu.name }}</p>
   </hgroup>
-  <button type="button" class="secondary no-print" data-print>{{ t("shopping.print") }}</button>
+  <button type="button" class="secondary outline btn-small no-print" data-print>{{ icon("printer") }} {{ t("shopping.print") }}</button>
 </div>
 {{ form_errors_notice(item_errors) }}
 
@@ -75,13 +75,13 @@
     <datalist id="unit-names">
       {% for name in unit_names %}<option value="{{ name }}">{% endfor %}
     </datalist>
-    <button type="submit">{{ t("shopping.add") }}</button>
+    <button type="submit">{{ icon("plus") }} {{ t("shopping.add") }}</button>
   </form>
 
   <hr>
 
   <form method="post" action="{{ url_for('shopping.regenerate', menu_id=menu.id) }}">
-    <button type="submit" class="secondary">{{ t("shopping.rebuild") }}</button>
+    <button type="submit" class="secondary outline btn-small">{{ icon("refresh") }} {{ t("shopping.rebuild") }}</button>
     <small class="help">{{ t("shopping.rebuild_help") }}</small>
   </form>
 </div>

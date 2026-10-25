@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import invalid, error_text, macro_value, form_errors_notice %}
+{% from "macros.html" import invalid, error_text, macro_value, form_errors_notice, icon, meal_icon, MACRO_ICONS %}
 
 {% block title %}{{ menu.name }} · CookingRecipe{% endblock %}
 
@@ -9,28 +9,28 @@
 {% set show_days = groups|length > 1 or (groups and groups[0][0] is not none) %}
 
 {% block content %}
-<p><a href="{{ url_for('menus.index') }}">← {{ t("menus.back") }}</a></p>
+<p><a href="{{ url_for('menus.index') }}" class="back-link">{{ icon("arrow-left") }} {{ t("menus.back") }}</a></p>
 
 <div class="page-head">
   <h1>{{ menu.name }}</h1>
-  <a href="{{ url_for('shopping.index', menu_id=menu.id) }}" role="button">{{ t("shopping.title") }}</a>
+  <a href="{{ url_for('shopping.index', menu_id=menu.id) }}" role="button" class="btn-small">{{ icon("cart") }} {{ t("shopping.title") }}</a>
 </div>
 {{ form_errors_notice(item_errors or name_error) }}
 
 {% for day, meals in groups %}
-  {% if show_days %}<h2>{{ day_label(day) }}</h2>{% endif %}
+  {% if show_days %}<h2>{{ icon("calendar") }} {{ day_label(day) }}</h2>{% endif %}
   {% for meal, items in meals %}
     {% if meal is not none or meals|length > 1 %}
-      <h3 class="meal-heading">{{ t("meal." ~ meal) if meal is not none else t("menus.no_meal") }}</h3>
+      <h3 class="meal-heading">{{ meal_icon(meal) }} {{ t("meal." ~ meal) if meal is not none else t("menus.no_meal") }}</h3>
     {% endif %}
     <ul class="menu-items">
       {% for item in items %}
         <li>
           <a href="{{ url_for('recipes.detail', recipe_id=item.recipe_id) }}">{{ item.title }}</a>
-          <small>{{ t("menus.item_servings", n=item.servings|num) }}</small>
+          <small>{{ icon("users") }} {{ t("menus.item_servings", n=item.servings|num) }}</small>
           <form method="post" action="{{ url_for('menus.delete_item', menu_id=menu.id, item_id=item.id) }}">
             <button type="submit" class="secondary outline"
-                    aria-label="{{ t('menus.remove_item') }}" title="{{ t('menus.remove_item') }}">×</button>
+                    aria-label="{{ t('menus.remove_item') }}" title="{{ t('menus.remove_item') }}">{{ icon("x") }}</button>
           </form>
         </li>
       {% endfor %}
@@ -41,13 +41,15 @@
 {% endfor %}
 
 {% if macros.incomplete or macros.total.values()|reject("none")|list %}
-  <h2>{{ t("macros.title") }}</h2>
+  <h2>{{ icon("flame") }} {{ t("macros.title") }}</h2>
   <figure class="table-scroll">
     <table class="menu-macros">
       <thead>
         <tr>
           <th></th>
-          {% for macro in macro_names %}<th class="num">{{ t("label." ~ macro) }}</th>{% endfor %}
+          {% for macro in macro_names %}
+            <th class="num macro-col macro-{{ macro }}">{{ icon(MACRO_ICONS[macro]) }} {{ t("label." ~ macro) }}</th>
+          {% endfor %}
         </tr>
       </thead>
       <tbody>
@@ -74,7 +76,7 @@
   </figure>
   {% if macros.incomplete %}
     <div class="flash flash-error macros-incomplete">
-      <p>{{ t("menus.macros_incomplete") }}</p>
+      <p>{{ icon("alert") }} {{ t("menus.macros_incomplete") }}</p>
       <ul>
         {% for recipe in macros.incomplete %}
           <li><a href="{{ url_for('recipes.detail', recipe_id=recipe.recipe_id) }}">{{ recipe.title }}</a></li>
@@ -125,10 +127,10 @@
         {% else %}<small>{{ t("menus.servings_help") }}</small>{% endif %}
       </label>
     </div>
-    <button type="submit">{{ t("menus.add") }}</button>
+    <button type="submit">{{ icon("plus") }} {{ t("menus.add") }}</button>
   </form>
 {% else %}
-  <p>{{ t("menus.no_recipes") }} <a href="{{ url_for('recipes.new') }}">{{ t("recipes.new") }}</a></p>
+  <p>{{ t("menus.no_recipes") }} <a href="{{ url_for('recipes.new') }}">{{ icon("plus") }} {{ t("recipes.new") }}</a></p>
 {% endif %}
 
 <hr>
@@ -138,7 +140,7 @@
     {{ t("menus.rename") }}
     <span class="inline-form">
       <input name="name" value="{{ name }}" required {{ invalid(name_error) }}>
-      <button type="submit" class="secondary">{{ t("btn.save") }}</button>
+      <button type="submit" class="secondary">{{ icon("check") }} {{ t("btn.save") }}</button>
     </span>
     {{ error_text(name_error) }}
   </label>
@@ -146,10 +148,10 @@
 
 <div class="actions">
   <form method="post" action="{{ url_for('menus.copy', menu_id=menu.id) }}">
-    <button type="submit" class="secondary">{{ t("menus.copy") }}</button>
+    <button type="submit" class="secondary outline btn-small">{{ icon("copy") }} {{ t("menus.copy") }}</button>
   </form>
   <form method="post" action="{{ url_for('menus.delete', menu_id=menu.id) }}" data-confirm="{{ t('menus.confirm_delete') }}">
-    <button type="submit" class="secondary">{{ t("menus.delete") }}</button>
+    <button type="submit" class="secondary outline btn-small">{{ icon("trash") }} {{ t("menus.delete") }}</button>
   </form>
 </div>
 {% endblock %}

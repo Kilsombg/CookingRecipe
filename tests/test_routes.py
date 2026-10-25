@@ -1,4 +1,5 @@
 import io
+import re
 
 import pytest
 from markupsafe import escape
@@ -153,15 +154,16 @@ def test_recipe_macros_and_incomplete_ingredients(app, client):
     recipe_id = query(app, db.list_recipes)[0]["id"]
 
     page = client.get(f"/recipes/{recipe_id}").get_data(as_text=True)
-    assert "275 kcal" in page
-    assert "550 kcal" in page
-    assert "57.5 g" in page                      # protein per serving: 500 g × 23 / 100 / 2
+    assert '≥</span>275</strong>' in page          # per serving badge, at least: the eggs have no data
+    assert "550 kcal" in page                      # whole recipe
+    assert '≥</span>58<small>g</small>' in page   # protein per serving: 500 g × 23 / 100 / 2 = 57.5
+    assert "115 g" in page
     eggs = query(app, db.find_ingredient, "Яйца")["id"]
     assert f"/ingredients/{eggs}/edit?next=/recipes/{recipe_id}" in page
     assert "grams per piece, calories, protein, carbs, fat" in page
-    assert "Сол" not in page.split("missing data:")[1]
+    assert "Сол" not in page.split("missing data:")[1].split("</div>")[0]
 
-    assert "≥ 275 kcal / serving" in client.get("/recipes").get_data(as_text=True)
+    assert '≥</span>275</strong>' in client.get("/recipes").get_data(as_text=True)
     assert [r["name"] for r in query(app, db.list_ingredients, "", True)] == ["Сол", "Яйца"]
 
     # Filling in the eggs from the recipe page goes back to the recipe, now complete
@@ -171,8 +173,8 @@ def test_recipe_macros_and_incomplete_ingredients(app, client):
     assert response.headers["Location"] == f"/recipes/{recipe_id}"
     page = client.get(f"/recipes/{recipe_id}").get_data(as_text=True)
     assert "missing data" not in page
-    assert "354 kcal" in page                    # (550 + 110 × 1.43) / 2 = 353.65
-    assert "354 kcal / serving" in client.get("/recipes").get_data(as_text=True)
+    assert '<strong class="macro-value">354</strong>' in page   # (550 + 110 × 1.43) / 2 = 353.65
+    assert '<strong class="macro-value">354</strong>' in client.get("/recipes").get_data(as_text=True)
 
 
 def test_ingredient_form_next_cannot_leave_the_site(app, client):
@@ -265,7 +267,7 @@ def test_source_link(app, client):
     recipe_id = query(app, db.list_recipes)[0]["id"]
     page = client.get(f"/recipes/{recipe_id}").get_data(as_text=True)
     assert ('<a href="https://www.youtube.com/watch?v=abc" target="_blank" rel="noopener noreferrer">'
-            "youtube.com ↗</a>") in page
+            "youtube.com <svg") in page
 
     form = client.get(f"/recipes/{recipe_id}/edit").get_data(as_text=True)
     assert 'value="https://www.youtube.com/watch?v=abc"' in form
@@ -350,7 +352,8 @@ def test_menu_grouped_by_day_and_meal_with_macros(app, client, lang):
     client.post(f"/menus/{menu_id}/items", data={"recipe_id": recipe_id, "day": "0", "meal": "", "servings": "1"})
 
     page = client.get(f"/menus/{menu_id}?day=2&meal=dinner").get_data(as_text=True)
-    items = page.split("<h2>")[1:3]   # Monday, then Wednesday, before the macros
+    # Monday, then Wednesday, before the macros; without the icons in front of the headings
+    items = [re.sub(r"<svg.*?</svg>\s*", "", item) for item in page.split("<h2>")[1:3]]
     if lang == "bg":
         assert items[0].startswith("Понеделник") and items[1].startswith("Сряда")
         assert items[0].index("Обяд") < items[0].index("Друго")
@@ -505,14 +508,14 @@ def test_favourite_toggle_card_star_and_filter(app, client):
     client.post("/recipes", data=recipe_form())
     client.post("/recipes", data=recipe_form(title="Омлет"))
     lunch = query(app, db.list_recipes, "Пиле с ориз")[0]["id"]
-    assert "★ Favourites" not in client.get("/recipes").get_data(as_text=True)  # offered once there is one
+    assert 'href="/recipes?fav=1"' not in client.get("/recipes").get_data(as_text=True)  # offered once there is one
     assert "Add to favourites" in client.get(f"/recipes/{lunch}").get_data(as_text=True)
 
     response = client.post(f"/recipes/{lunch}/favourite", data={"favourite": "1"})
     assert response.headers["Location"] == f"/recipes/{lunch}"
     assert 'aria-pressed="true"' in client.get(f"/recipes/{lunch}").get_data(as_text=True)
     page = client.get("/recipes").get_data(as_text=True)
-    assert "★ Favourites" in page and page.count('class="favourite-star"') == 1
+    assert 'href="/recipes?fav=1"' in page and page.count('class="favourite-star"') == 1
 
     page = client.get("/recipes?fav=1").get_data(as_text=True)
     assert "Пиле с ориз" in page and "Омлет" not in page

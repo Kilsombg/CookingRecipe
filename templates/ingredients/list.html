@@ -1,26 +1,28 @@
 {% extends "base.html" %}
+{% from "macros.html" import icon, MACRO_ICONS %}
 
 {% block title %}{{ t("ingredients.title") }} · CookingRecipe{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1>{{ t("ingredients.title") }}</h1>
-  <a href="{{ url_for('ingredients.new') }}" role="button">{{ t("ingredients.new") }}</a>
+  <div class="toolbar">
+    <form method="get" action="{{ url_for('ingredients.index') }}" role="search" class="search-box">
+      {% if missing %}<input type="hidden" name="missing" value="1">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="{{ t('ingredients.search_placeholder') }}"
+             aria-label="{{ t('ingredients.search_placeholder') }}">
+      <button type="submit" aria-label="{{ t('btn.search') }}" title="{{ t('btn.search') }}">{{ icon("search") }}</button>
+    </form>
+    <a href="{{ url_for('ingredients.new') }}" role="button" class="btn-small">{{ icon("plus") }} {{ t("ingredients.new") }}</a>
+  </div>
 </div>
-
-<form method="get" action="{{ url_for('ingredients.index') }}" role="search">
-  {% if missing %}<input type="hidden" name="missing" value="1">{% endif %}
-  <input type="search" name="q" value="{{ q }}" placeholder="{{ t('ingredients.search_placeholder') }}"
-         aria-label="{{ t('ingredients.search_placeholder') }}">
-  <button type="submit">{{ t("btn.search") }}</button>
-</form>
 
 <p class="filter-toggle">
   {% if missing %}
-    <strong>{{ t("ingredients.filter_missing_on") }}</strong>
+    {{ icon("alert") }} <strong>{{ t("ingredients.filter_missing_on") }}</strong>
     · <a href="{{ url_for('ingredients.index', q=q or none) }}">{{ t("ingredients.show_all") }}</a>
   {% else %}
-    <a href="{{ url_for('ingredients.index', q=q or none, missing=1) }}">{{ t("ingredients.filter_missing") }}</a>
+    <a href="{{ url_for('ingredients.index', q=q or none, missing=1) }}">{{ icon("alert") }} {{ t("ingredients.filter_missing") }}</a>
   {% endif %}
 </p>
 
@@ -30,10 +32,9 @@
       <thead>
         <tr>
           <th>{{ t("label.name") }}</th>
-          <th class="num">{{ t("ingredients.col_calories") }}</th>
-          <th class="num">{{ t("ingredients.col_protein") }}</th>
-          <th class="num">{{ t("ingredients.col_carbs") }}</th>
-          <th class="num">{{ t("ingredients.col_fat") }}</th>
+          {% for macro in macro_names %}
+            <th class="num macro-col macro-{{ macro }}">{{ icon(MACRO_ICONS[macro]) }} {{ t("ingredients.col_" ~ macro) }}</th>
+          {% endfor %}
           <th class="num">{{ t("ingredients.col_grams_per_piece") }}</th>
           <th class="num">{{ t("ingredients.col_used_in") }}</th>
         </tr>

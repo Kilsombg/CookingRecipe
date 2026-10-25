@@ -1,5 +1,16 @@
+{% from "macros.html" import icon %}
+{# The shopping list belongs to a menu, so it lights up the Menus link. #}
+{% set nav_items = [
+  ("recipes", "recipes.index", "book", "nav.recipes"),
+  ("ingredients", "ingredients.index", "carrot", "nav.ingredients"),
+  ("menus", "menus.index", "calendar", "nav.menus"),
+  ("units", "units.index", "scale", "nav.units"),
+  ("data", "data.index", "database", "nav.data"),
+] %}
+{% set section = "menus" if request.blueprint == "shopping" else request.blueprint %}
 <!doctype html>
-<html lang="{{ lang }}">
+{# Always the light theme: the honey-and-paper colours in app.css are the app's one look. #}
+<html lang="{{ lang }}" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,20 +20,20 @@
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 <body>
-  <header class="container">
+  <header class="container site-header">
     <nav>
       <ul>
-        <li><strong><a href="/" class="contrast">CookingRecipe</a></strong></li>
+        <li><a href="/" class="brand">{{ icon("chef-hat") }}<span>CookingRecipe</span></a></li>
       </ul>
-      <ul>
-        <li><a href="{{ url_for('recipes.index') }}">{{ t("nav.recipes") }}</a></li>
-        <li><a href="{{ url_for('ingredients.index') }}">{{ t("nav.ingredients") }}</a></li>
-        <li><a href="{{ url_for('menus.index') }}">{{ t("nav.menus") }}</a></li>
-        <li><a href="{{ url_for('units.index') }}">{{ t("nav.units") }}</a></li>
-        <li><a href="{{ url_for('data.index') }}">{{ t("nav.data") }}</a></li>
+      <ul class="site-nav">
+        {% for name, endpoint, icon_name, label in nav_items %}
+          <li><a href="{{ url_for(endpoint) }}" {% if section == name %}aria-current="page"{% endif %}>
+            {{ icon(icon_name) }}<span>{{ t(label) }}</span></a></li>
+        {% endfor %}
         <li>
           <form method="post" action="{{ url_for('i18n.set_language') }}" class="lang-switch"
                 aria-label="{{ t('nav.language') }}">
+            {{ icon("globe") }}
             <input type="hidden" name="next"
                    value="{{ request.full_path if request.query_string else request.path }}">
             {% for code, label in languages.items() %}
@@ -35,9 +46,9 @@
       </ul>
     </nav>
   </header>
-  <main class="container">
+  <main class="container book-page">
     {% for category, message in get_flashed_messages(with_categories=true) %}
-      <p class="flash flash-{{ category }}" role="status">{{ message }}</p>
+      <p class="flash flash-{{ category }}" role="status">{{ icon("alert" if category == "error" else "check") }} {{ message }}</p>
     {% endfor %}
     {% block content %}{% endblock %}
   </main>

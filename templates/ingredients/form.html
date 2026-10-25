@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "macros.html" import invalid, error_text, form_errors_notice %}
+{% from "macros.html" import invalid, error_text, form_errors_notice, icon %}
 
 {% set heading = t("ingredients.edit_title") if ingredient else t("ingredients.new") %}
 {% block title %}{{ heading }} · CookingRecipe{% endblock %}
 
-{% macro number_field(field, label) %}
-  <label>
-    {{ label }}
+{% macro number_field(field, label, icon_name, macro) %}
+  <label class="macro-field macro-{{ macro }}">
+    {{ icon(icon_name) }} {{ label }}
     <input name="{{ field }}" value="{{ form[field] }}" inputmode="decimal" {{ invalid(errors[field]) }}>
     {{ error_text(errors[field]) }}
   </label>
@@ -30,10 +30,10 @@
     <legend>{{ t("ingredients.macros_per_100g") }}</legend>
     <p><small>{{ t("ingredients.macros_help") }}</small></p>
     <div class="grid">
-      {{ number_field("calories_100g", t("ingredients.calories_kcal")) }}
-      {{ number_field("protein_100g", t("ingredients.protein_g")) }}
-      {{ number_field("carbs_100g", t("ingredients.carbs_g")) }}
-      {{ number_field("fat_100g", t("ingredients.fat_g")) }}
+      {{ number_field("calories_100g", t("ingredients.calories_kcal"), "flame", "calories") }}
+      {{ number_field("protein_100g", t("ingredients.protein_g"), "dumbbell", "protein") }}
+      {{ number_field("carbs_100g", t("ingredients.carbs_g"), "wheat", "carbs") }}
+      {{ number_field("fat_100g", t("ingredients.fat_g"), "droplet", "fat") }}
     </div>
     {% if errors.macros %}<p class="flash flash-error">{{ t(errors.macros) }}</p>{% endif %}
   </fieldset>
@@ -47,8 +47,8 @@
   </label>
 
   <div class="actions">
-    <button type="submit">{{ t("btn.save") }}</button>
-    <a href="{{ back_url }}" role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
+    <button type="submit">{{ icon("check") }} {{ t("btn.save") }}</button>
+    <a href="{{ back_url }}" role="button" class="secondary outline">{{ icon("x") }} {{ t("btn.cancel") }}</a>
   </div>
 </form>
 
@@ -66,7 +66,7 @@
     <p>{{ t("ingredients.not_used") }}</p>
     <form method="post" action="{{ url_for('ingredients.delete', ingredient_id=ingredient.id) }}"
           data-confirm="{{ t('ingredients.confirm_delete') }}">
-      <button type="submit" class="secondary">{{ t("btn.delete") }}</button>
+      <button type="submit" class="secondary outline btn-small">{{ icon("trash") }} {{ t("btn.delete") }}</button>
     </form>
   {% endif %}
 {% endif %}

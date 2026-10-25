@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import invalid, form_errors_notice %}
+{% from "macros.html" import invalid, form_errors_notice, icon %}
 
 {% block title %}{{ t("units.title") }} · CookingRecipe{% endblock %}
 
@@ -33,10 +33,10 @@
     {{ unit_fields(typed if editing else {"name": unit.name, "grams": unit.grams|num},
                    errors if editing else {}) }}
     <span class="unit-usage">{{ t("units.recipe_count", n=unit.recipe_count) }}</span>
-    <button type="submit" class="secondary">{{ t("btn.save") }}</button>
+    <button type="submit" class="secondary" title="{{ t('btn.save') }}">{{ icon("check") }} {{ t("btn.save") }}</button>
     {% if unit.recipe_count == 0 %}
       <button type="submit" class="secondary outline" formaction="{{ url_for('units.delete', unit_id=unit.id) }}"
-              formnovalidate data-confirm="{{ t('units.confirm_delete') }}">{{ t("btn.delete") }}</button>
+              formnovalidate data-confirm="{{ t('units.confirm_delete') }}">{{ icon("trash") }} {{ t("btn.delete") }}</button>
     {% endif %}
     {% if editing %}{{ row_error_texts(errors) }}{% endif %}
   </form>
@@ -46,7 +46,7 @@
 {% set adding = edit_id is none and typed %}
 <form method="post" action="{{ url_for('units.create') }}" class="unit-row">
   {{ unit_fields(typed if adding else {"name": "", "grams": ""}, errors if adding else {}) }}
-  <button type="submit">{{ t("units.add_button") }}</button>
+  <button type="submit">{{ icon("plus") }} {{ t("units.add_button") }}</button>
   {% if adding %}{{ row_error_texts(errors) }}{% endif %}
 </form>
 <p><small>{{ t("units.grams_note") }}</small></p>

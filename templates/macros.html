@@ -10,6 +10,35 @@
   {%- else %}{{ t("macros.grams", n=value|round(1)|num) }}{% endif -%}
 {%- endmacro %}
 
+{# An icon from static/icons.svg. Decorative: the text next to it (or an aria-label) says what it is. #}
+{% macro icon(name, cls="") -%}
+  <svg class="icon{% if cls %} {{ cls }}{% endif %}" aria-hidden="true"><use href="{{ url_for('static', filename='icons.svg') }}#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% set MACRO_ICONS = {"calories": "flame", "protein": "dumbbell", "carbs": "wheat", "fat": "droplet"} %}
+{% set MEAL_ICONS = {"breakfast": "sunrise", "lunch": "sun", "dinner": "moon", "snack": "apple"} %}
+
+{% macro meal_icon(meal) %}{{ icon(MEAL_ICONS.get(meal, "utensils")) }}{% endmacro %}
+
+{# Macro badges, one per known macro, each outlined in its own colour: icon, big number, small name.
+   `partial` (some ingredients have no data) puts "≥" before the numbers. #}
+{% macro macro_badges(values, partial=false, cls="") %}
+  {% if values.values()|reject("none")|list %}
+    <ul class="macro-badges {{ cls }}" {% if partial %}title="{{ t('recipes.card_kcal_partial_hint') }}"{% endif %}>
+      {% for macro in macro_names if values[macro] is not none %}
+        <li class="macro macro-{{ macro }}">
+          {{ icon(MACRO_ICONS[macro]) }}
+          <strong class="macro-value">
+            {%- if partial %}<span class="macro-partial">≥</span>{% endif -%}
+            {{ values[macro]|round|num }}{% if macro != "calories" %}<small>{{ t("macros.short_grams") }}</small>{% endif -%}
+          </strong>
+          <span class="macro-name">{{ t("macros.short_" ~ macro) }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endmacro %}
+
 {% macro form_errors_notice(errors) %}
   {% if errors %}<p class="flash flash-error" role="alert">{{ t("msg.fix_errors") }}</p>{% endif %}
 {% endmacro %}

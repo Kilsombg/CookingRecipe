@@ -1,9 +1,206 @@
+/* CookingRecipe look: a cookbook page on a honey-coloured table, with restaurant-menu dish lists.
+   Colours live here as variables; the page always uses the light theme (data-theme="light" in base.html). */
+
+:root[data-theme="light"] {
+  --honey-light: #f8dc8e;
+  --honey: #ecc062;
+  --honey-deep: #d99f3c;
+  --paper: #fffaee;
+  --paper-warm: #fff3d6;
+  --paper-edge: #e8d2a0;
+  --ink: #3a2412;
+  --ink-soft: #6e4e2e;
+  --paprika: #a3301a;
+  --paprika-dark: #7f2210;
+  --gold: #d99a00;
+  --serif: Georgia, "Palatino Linotype", "Book Antiqua", Cambria, serif;
+  --menu-font: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+
+  /* One colour per macro, so they are recognised at a glance */
+  --macro-calories: #2e7d32;
+  --macro-protein: #c62828;
+  --macro-carbs: #c08a00;
+  --macro-fat: #d9600b;
+
+  /* Pico, in the same colours */
+  --pico-font-family-sans-serif: "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --pico-background-color: var(--paper);
+  --pico-color: var(--ink);
+  --pico-h1-color: var(--paprika);
+  --pico-h2-color: var(--paprika);
+  --pico-h3-color: var(--ink);
+  --pico-h4-color: var(--ink);
+  --pico-h5-color: var(--ink);
+  --pico-h6-color: var(--ink);
+  --pico-muted-color: #8a6a48;
+  --pico-muted-border-color: var(--paper-edge);
+  --pico-border-radius: 0.5rem;
+  --pico-primary: var(--paprika);
+  --pico-primary-background: var(--paprika);
+  --pico-primary-border: var(--paprika);
+  --pico-primary-underline: rgba(163, 48, 26, 0.45);
+  --pico-primary-hover: var(--paprika-dark);
+  --pico-primary-hover-background: var(--paprika-dark);
+  --pico-primary-hover-border: var(--paprika-dark);
+  --pico-primary-hover-underline: var(--paprika-dark);
+  --pico-primary-focus: rgba(163, 48, 26, 0.25);
+  --pico-primary-inverse: #fff;
+  --pico-secondary: var(--ink-soft);
+  --pico-secondary-background: var(--ink-soft);
+  --pico-secondary-border: var(--ink-soft);
+  --pico-secondary-underline: rgba(110, 78, 46, 0.45);
+  --pico-secondary-hover: var(--ink);
+  --pico-secondary-hover-background: var(--ink);
+  --pico-secondary-hover-border: var(--ink);
+  --pico-secondary-hover-underline: var(--ink);
+  --pico-secondary-focus: rgba(110, 78, 46, 0.25);
+  --pico-secondary-inverse: #fff;
+  --pico-del-color: #b3261e;
+  --pico-card-background-color: #fffdf6;
+  --pico-card-sectioning-background-color: var(--paper-warm);
+  --pico-form-element-background-color: #fffdf8;
+  --pico-form-element-selected-background-color: var(--paper-warm);
+  --pico-form-element-border-color: #dcc596;
+  --pico-form-element-focus-color: var(--paprika);
+  --pico-form-element-active-border-color: var(--paprika);
+  --pico-form-element-active-background-color: #fff;
+  --pico-dropdown-background-color: #fffdf6;
+  --pico-dropdown-border-color: var(--paper-edge);
+  --pico-dropdown-hover-background-color: var(--paper-warm);
+  --pico-dropdown-color: var(--ink);
+  --pico-table-border-color: var(--paper-edge);
+  --pico-table-row-stripped-background-color: #fbf1da;
+  --pico-text-selection-color: rgba(236, 192, 98, 0.45);
+}
+
+html {
+  background: radial-gradient(ellipse at 50% 0%, var(--honey-light) 0%, var(--honey) 55%, var(--honey-deep) 100%) fixed;
+  background-color: var(--honey);
+}
+
+body {
+  background: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+}
+
+h1 {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Icons from static/icons.svg: they take the text colour and size */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon.filled {
+  fill: currentColor;
+}
+
+button:has(.icon),
+[role="button"]:has(.icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+}
+
+h1 .icon,
+h2 .icon,
+h3 .icon {
+  color: var(--paprika);
+  vertical-align: -0.15em;
+}
+
+/* Header: the name on the left, navigation with icons on the right */
+.site-header nav {
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
+
+.site-nav {
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--paprika);
+  text-decoration: none;
+}
+
+.brand .icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.site-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  background: rgba(255, 250, 238, 0.55);
+  color: var(--paprika-dark);
+}
+
+.site-nav a[aria-current="page"] {
+  background: var(--paper);
+  color: var(--paprika);
+  box-shadow: 0 2px 6px rgba(90, 50, 10, 0.18);
+}
+
+/* On a narrow screen the navigation shows only its icons; the names stay for screen readers */
+@media (max-width: 860px) {
+  .site-nav a span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .site-nav a {
+    padding: 0.4rem 0.55rem;
+  }
+
+  .site-nav a .icon {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}
+
 /* Language switch: buttons that look like nav links */
 .lang-switch {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   margin: 0;
+  color: var(--ink-soft);
 }
 
 .lang-switch button {
@@ -12,37 +209,190 @@
   padding: 0 0.25rem;
   border: none;
   background: none;
-  color: var(--pico-primary);
+  color: var(--ink-soft);
 }
 
 .lang-switch button[aria-current] {
-  color: var(--pico-contrast);
+  color: var(--paprika);
   font-weight: bold;
+}
+
+/* Every page sits on a cream "book page" with a thin inner frame, like a printed menu */
+.book-page {
+  margin-bottom: 3rem;
+  padding: 2rem 2.5rem 2.5rem;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: 0.75rem;
+  outline: 1px solid rgba(163, 48, 26, 0.2);
+  outline-offset: -0.6rem;
+  box-shadow: 0 10px 30px rgba(90, 50, 10, 0.25), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+@media (max-width: 576px) {
+  .book-page {
+    padding: 1.25rem 1rem 1.5rem;
+    outline-offset: -0.35rem;
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.empty-note {
+  padding: 2rem 0;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--pico-muted-color);
+  text-align: center;
+}
+
+.small-caps {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
 }
 
 /* Flash messages and form-level errors */
 .flash {
   padding: 0.75rem 1rem;
-  border-left: 4px solid var(--pico-primary);
-  background: var(--pico-card-background-color);
+  border-left: 4px solid var(--macro-calories);
+  border-radius: 0 var(--pico-border-radius) var(--pico-border-radius) 0;
+  background: var(--paper-warm);
+}
+
+p.flash {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .flash-error {
   border-left-color: var(--pico-del-color);
 }
 
-/* Page heading with a button on the right */
+.flash .icon {
+  color: var(--macro-calories);
+}
+
+.flash-error .icon {
+  color: var(--pico-del-color);
+}
+
+/* Page heading with a button (or a small toolbar) on the right */
 .page-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--pico-spacing);
-  margin-bottom: var(--pico-spacing);
+  margin-bottom: calc(var(--pico-spacing) * 1.5);
 }
 
-.page-head h1 {
+.page-head h1,
+.page-head hgroup {
   margin: 0;
+}
+
+/* Small buttons, for actions that shouldn't steal attention from the content */
+.btn-small {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+}
+
+/* A round button with only an icon: the favourite star */
+button.btn-icon {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--paper-edge);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink-soft);
+}
+
+.btn-icon:hover,
+.btn-icon.is-favourite {
+  border-color: var(--gold);
+  background: #fff;
+  color: var(--gold);
+}
+
+.btn-icon .icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/* Toolbar: search, category and "new", all compact */
+.toolbar {
+  --pico-form-element-spacing-vertical: 0.35rem;
+  --pico-form-element-spacing-horizontal: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.toolbar .search-box {
+  width: 17rem;
+  margin: 0;
+}
+
+.toolbar .search-box input[type="search"] {
+  background-image: none;
+  padding-inline-start: var(--pico-form-element-spacing-horizontal);
+  font-size: 0.875rem;
+}
+
+.toolbar .search-box button {
+  padding: 0 0.75rem;
+}
+
+.category-menu {
+  min-width: 11rem;
+  margin: 0;
+}
+
+.category-menu summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.category-menu summary .icon,
+.category-menu li .icon {
+  color: var(--paprika);
+}
+
+.category-menu summary .icon.filled,
+.category-menu li .icon.filled {
+  color: var(--gold);
+}
+
+.category-menu li a[aria-current] {
+  font-weight: bold;
+  color: var(--paprika);
+}
+
+@media (max-width: 576px) {
+  .toolbar,
+  .toolbar .search-box {
+    width: 100%;
+  }
 }
 
 /* Buttons side by side: Save / Cancel, Edit / Delete */
@@ -66,6 +416,14 @@ td.num {
   text-align: right;
 }
 
+thead th {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
 /* Wide tables scroll sideways on a narrow screen instead of squeezing */
 .table-scroll {
   overflow-x: auto;
@@ -75,8 +433,8 @@ td.num {
   margin-top: calc(var(--pico-spacing) * -0.5);
 }
 
-.macros-table {
-  max-width: 32rem;
+.filter-toggle .icon {
+  color: var(--gold);
 }
 
 .macros-incomplete ul {
@@ -87,39 +445,466 @@ td.num {
   list-style: none;
 }
 
-/* Recipe cards */
-.card-grid {
+/* Macros: each has its own colour. Badges are outlined in it, table headings and form labels use it too. */
+.macro-calories { --macro: var(--macro-calories); }
+.macro-protein { --macro: var(--macro-protein); }
+.macro-carbs { --macro: var(--macro-carbs); }
+.macro-fat { --macro: var(--macro-fat); }
+
+.macro-col,
+.macro-col .icon,
+.macro-field .icon {
+  color: var(--macro);
+}
+
+.macro-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.macro-badges li.macro {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: var(--pico-spacing);
-}
-
-.recipe-card {
+  justify-items: center;
+  min-width: 3.4rem;
   margin: 0;
-  overflow: hidden;
+  padding: 0.3rem 0.35rem;
+  list-style: none;
+  border: 2px solid var(--macro);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--macro) 7%, #fff);
+  line-height: 1;
 }
 
-/* Photo across the full width of the card, above the title */
-.card-photo {
+.macro .icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--macro);
+}
+
+.macro-value {
+  margin: 0.2rem 0 0.15rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.macro-value small {
+  margin-left: 1px;
+  font-size: 0.6em;
+  font-weight: 700;
+}
+
+.macro-partial {
+  font-size: 0.7em;
+  margin-right: 1px;
+  color: var(--pico-muted-color);
+}
+
+.macro-name {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--macro) 80%, #000);
+}
+
+.macro-badges-large li.macro {
+  min-width: 5.2rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.8rem;
+}
+
+.macro-badges-large .icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.macro-badges-large .macro-value {
+  font-size: 1.8rem;
+}
+
+.macro-badges-large .macro-name {
+  font-size: 0.7rem;
+}
+
+/* Tags: small rounded labels with an icon, used as filter links */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.55rem;
+  border: 1px solid var(--paper-edge);
+  border-radius: 1rem;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.tag .icon {
+  color: var(--paprika);
+}
+
+.tag:hover {
+  border-color: var(--paprika);
+  color: var(--paprika);
+}
+
+/* Recipe list: dishes on a menu page. Round plates alternate left and right, in two columns when there's room. */
+.dish-list {
+  columns: 2 24rem;
+  column-gap: 2.5rem;
+  column-rule: 1px dashed var(--paper-edge);
+}
+
+.dish {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 1rem 0 1.25rem;
+  break-inside: avoid;
+  background: none;
+  box-shadow: none;
+}
+
+.dish:nth-child(even) {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.dish:nth-child(even) .dish-facts,
+.dish:nth-child(even) .macro-badges {
+  justify-content: flex-end;
+}
+
+.dish-plate {
+  flex: 0 0 8.5rem;
+  aspect-ratio: 1;
+  padding: 0.45rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(90, 50, 10, 0.28), 0 0 0 1px #efe3c8 inset;
+  transition: transform 0.2s ease;
+}
+
+.dish-plate:hover {
+  transform: scale(1.04) rotate(-3deg);
+}
+
+.dish-plate img {
   display: block;
-  margin: calc(var(--pico-block-spacing-vertical) * -1) calc(var(--pico-block-spacing-horizontal) * -1)
-    var(--pico-block-spacing-vertical);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-warm);
 }
 
-.card-photo img,
+.dish-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dish-name {
+  margin: 0 0 0.3rem;
+  font-family: var(--menu-font);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.dish-name a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.dish-name a:hover {
+  color: var(--paprika);
+}
+
+.favourite-star {
+  color: var(--gold);
+}
+
+.dish-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.9rem;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.dish-facts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+
+.dish-facts > span .icon {
+  color: var(--paprika);
+}
+
+@media (max-width: 576px) {
+  .dish {
+    gap: 0.9rem;
+  }
+
+  .dish-plate {
+    flex-basis: 6.5rem;
+    padding: 0.3rem;
+  }
+
+  .dish-name {
+    font-size: 1.15rem;
+  }
+}
+
+/* Recipe page: a cookbook spread */
+.recipe,
+.recipe > header,
+.recipe > footer {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+.recipe-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 2.5rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.recipe-hero.no-photo {
+  grid-template-columns: 1fr;
+}
+
 .recipe-photo {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  max-width: 26rem;
+  aspect-ratio: 1;
+  margin: 0 auto;
   object-fit: cover;
-  background: var(--pico-muted-border-color);
+  border: 0.6rem solid #fff;
+  border-radius: 50%;
+  background: var(--paper-warm);
+  box-shadow: 0 12px 28px rgba(90, 50, 10, 0.3), 0 0 0 1px #efe3c8;
 }
 
-.recipe-photo {
-  max-height: 28rem;
-  aspect-ratio: auto;
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recipe h1 {
+  margin-bottom: 1rem;
+  font-size: 2.4rem;
+  font-weight: normal;
+  line-height: 1.15;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.favourite-form {
+  margin: 0;
+}
+
+.recipe-stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--paper-edge);
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.recipe-stats li {
+  display: flex;
+  flex: 1 1 5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0;
+  list-style: none;
+  text-align: center;
+}
+
+.recipe-stats li + li {
+  border-left: 1px dashed var(--paper-edge);
+}
+
+.recipe-stats .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--paprika);
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+}
+
+.macro-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.macro-total .small-caps {
+  margin: 0;
+  align-self: center;
+}
+
+.source-link {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.recipe-body {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) 2fr;
+  gap: 3rem;
+  padding-top: 1.5rem;
+  border-top: 3px double var(--paper-edge);
+}
+
+.recipe-body h2 {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--paper-edge);
+  font-size: 1.5rem;
+}
+
+.ingredient-lines {
+  padding: 0;
+}
+
+.ingredient-lines li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.45rem 0;
+  list-style: none;
+  border-bottom: 1px dotted var(--paper-edge);
+}
+
+.ingredient-lines .qty {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ingredient-lines a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.ingredient-lines a:hover {
+  color: var(--paprika);
+}
+
+/* Steps with big round numbers */
+.steps {
+  padding: 0;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  margin: 0 0 1.1rem;
+  padding-left: 3rem;
+  list-style: none;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: -0.15rem;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--paprika);
+  color: #fff;
+  font-family: var(--serif);
+  font-weight: bold;
+}
+
+.note-card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--honey-deep);
+  border-radius: 0 var(--pico-border-radius) var(--pico-border-radius) 0;
+  background: var(--paper-warm);
+}
+
+.note-card h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.recipe > footer.actions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--paper-edge);
+}
+
+@media (max-width: 768px) {
+  .recipe-hero,
+  .recipe-body {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .recipe-photo {
+    max-width: 18rem;
+  }
+
+  .recipe h1 {
+    font-size: 1.9rem;
+  }
+}
+
+/* Instructions and notes keep the line breaks they were typed with */
+.prose {
+  white-space: pre-line;
   margin-bottom: var(--pico-spacing);
-  border-radius: var(--pico-border-radius);
+}
+
+.note-card .prose {
+  margin-bottom: 0;
 }
 
 /* Current photo next to the file input on the recipe form */
@@ -135,72 +920,17 @@ td.num {
 
 .photo-thumb {
   width: 8rem;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1;
   object-fit: cover;
-  border-radius: var(--pico-border-radius);
+  border: 0.3rem solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(90, 50, 10, 0.25);
 }
 
-/* Tags: small rounded labels, used as filter links */
-.tag-filter,
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.tag-filter {
-  margin-bottom: var(--pico-spacing);
-}
-
-.tag-list {
-  margin: 0.5rem 0 0;
-}
-
-.tag {
-  padding: 0.1rem 0.6rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: 1rem;
-  font-size: 0.875em;
-  text-decoration: none;
-}
-
-.tag[aria-current] {
-  background: var(--pico-primary-background);
-  border-color: var(--pico-primary-background);
-  color: var(--pico-primary-inverse);
-}
-
-.recipe-card h3 {
-  margin-bottom: 0.5rem;
-}
-
-/* Favourites: a star before the title on the cards, and the toggle next to the title on the recipe page */
-.favourite-star {
-  color: var(--pico-primary);
-}
-
-.favourite-form,
-.favourite-form button {
-  width: auto;
-  margin: 0;
-}
-
-.recipe-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 1.5rem;
-  margin: 0;
-  color: var(--pico-muted-color);
-}
-
-/* Instructions and notes keep the line breaks they were typed with */
-.prose {
-  white-space: pre-line;
-  margin-bottom: var(--pico-spacing);
-}
-
-.ingredient-lines li {
-  list-style: none;
+/* Form labels and legends: the icon in the accent colour */
+label > .icon,
+legend > .icon {
+  color: var(--paprika);
 }
 
 /* Ingredient rows on the recipe form: name, quantity, unit, note, remove */
@@ -260,9 +990,32 @@ td.num {
 }
 
 /* Menus: list of menus, and the recipes of a day / meal with a remove button */
+.menu-list,
+.menu-items {
+  padding: 0;
+}
+
 .menu-list li,
 .menu-items li {
   list-style: none;
+}
+
+.menu-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px dotted var(--paper-edge);
+}
+
+.menu-list a {
+  font-family: var(--menu-font);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.menu-list a .icon {
+  color: var(--paprika);
 }
 
 .menu-list small,
@@ -275,6 +1028,7 @@ td.num {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.25rem 0;
 }
 
 .menu-items form {
@@ -284,13 +1038,13 @@ td.num {
 .menu-items button {
   width: auto;
   margin: 0;
-  padding: 0.1rem 0.6rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .meal-heading {
   margin: var(--pico-spacing) 0 0.5rem;
   font-size: 1rem;
-  color: var(--pico-muted-color);
+  color: var(--ink-soft);
 }
 
 .menu-macros tfoot th,
@@ -307,7 +1061,9 @@ td.num {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.2rem 0;
   list-style: none;
+  border-bottom: 1px dotted var(--paper-edge);
 }
 
 .shopping-list label {
@@ -331,44 +1087,12 @@ td.num {
 .shopping-list button {
   width: auto;
   margin: 0;
-  padding: 0.1rem 0.6rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .help {
   display: block;
   color: var(--pico-muted-color);
-}
-
-/* Printing: just the list, in black on white, with empty boxes to tick by pen */
-@media print {
-  header,
-  .no-print,
-  .flash {
-    display: none !important;
-  }
-
-  /* Also in dark mode, which would otherwise print light text */
-  body,
-  h1,
-  h2,
-  hgroup p {
-    background: #fff;
-    color: #000;
-  }
-
-  .shopping-list li {
-    break-inside: avoid;
-  }
-
-  .shopping-list input[type="checkbox"] {
-    appearance: auto;
-    -webkit-appearance: checkbox;
-  }
-
-  .shopping-list small,
-  .shopping-list input:checked + span {
-    color: #000;
-  }
 }
 
 /* Units page: one form per unit — name, grams, how many recipes use it, save, delete */
@@ -407,5 +1131,48 @@ td.num {
 
   .unit-head {
     display: none;
+  }
+}
+
+/* Printing: just the content, in black on white, with empty boxes to tick by pen */
+@media print {
+  header.site-header,
+  .no-print,
+  .flash {
+    display: none !important;
+  }
+
+  html,
+  .book-page {
+    background: #fff;
+  }
+
+  .book-page {
+    padding: 0;
+    border: none;
+    outline: none;
+    box-shadow: none;
+  }
+
+  body,
+  h1,
+  h2,
+  hgroup p,
+  .icon {
+    color: #000 !important;
+  }
+
+  .shopping-list li {
+    break-inside: avoid;
+  }
+
+  .shopping-list input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: checkbox;
+  }
+
+  .shopping-list small,
+  .shopping-list input:checked + span {
+    color: #000;
   }
 }

@@ -66,7 +66,7 @@ CookingRecipe/
 ├── templates/
 │   ├── base.html          # layout, navigation, flash messages, <meta charset="utf-8">
 │   ├── error.html         # simple error page (upload over the size limit)
-│   ├── macros.html        # form error helpers
+│   ├── macros.html        # form error helpers, icon(), macro badges
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
@@ -75,9 +75,10 @@ CookingRecipe/
 │   └── data/              # index.html (export / import)
 ├── static/
 │   ├── pico.min.css
-│   ├── app.css            # small custom styles (card grid, print styles)
+│   ├── app.css            # the app's look: honey/paper colours over Pico, menu-style recipe list, cookbook recipe page, print styles
 │   ├── app.js             # ingredient rows, shopping-list ticks
-│   └── placeholder.svg    # shown on recipe cards without a photo
+│   ├── icons.svg          # icon sprite (navigation, actions, recipe facts, macros, meals), used through icon() in macros.html
+│   └── placeholder.svg    # shown on recipe plates without a photo
 ├── images/                # uploaded photos (not committed to git)
 ├── backups/               # automatic DB copies made before migrations (not committed)
 ├── tests/                 # pytest tests for services/ and db.py

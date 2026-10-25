@@ -33,6 +33,9 @@ def test_every_used_key_exists():
 
 
 def test_keys_built_in_templates_exist():
-    # t("label." ~ macro) and t("macros.missing_" ~ missing), which the pattern above can't see
-    built = {f"label.{m}" for m in MACROS} | {f"macros.missing_{m}" for m in (*MACROS, "grams_per_piece")}
+    # t("label." ~ macro), t("macros.short_" ~ macro), t("ingredients.col_" ~ macro) and
+    # t("macros.missing_" ~ missing), which the pattern above can't see
+    built = ({f"label.{m}" for m in MACROS} | {f"macros.short_{m}" for m in MACROS}
+             | {f"ingredients.col_{m}" for m in MACROS}
+             | {f"macros.missing_{m}" for m in (*MACROS, "grams_per_piece")})
     assert sorted(built - set(TEXTS["en"])) == []

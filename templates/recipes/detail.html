@@ -1,105 +1,120 @@
 {% extends "base.html" %}
-{% from "macros.html" import macro_value %}
+{% from "macros.html" import icon, macro_value, macro_badges %}
 
 {% block title %}{{ recipe.title }} · CookingRecipe{% endblock %}
 
-{% block content %}
-<p><a href="{{ url_for('recipes.index') }}">← {{ t("recipes.back") }}</a></p>
+{% macro stat(icon_name, label, value) %}
+  <li>{{ icon(icon_name) }}<span class="stat-label">{{ label }}</span><strong>{{ value }}</strong></li>
+{% endmacro %}
 
-<article>
-  <header>
+{% block content %}
+<p><a href="{{ url_for('recipes.index') }}" class="back-link">{{ icon("arrow-left") }} {{ t("recipes.back") }}</a></p>
+
+{# Laid out like a cookbook spread: photo and title on top, then ingredients beside the steps. #}
+<article class="recipe">
+  <header class="recipe-hero {% if not recipe.photo_filename %}no-photo{% endif %}">
     {% if recipe.photo_filename %}
       <img src="{{ url_for('image', filename=recipe.photo_filename) }}" alt="{{ recipe.title }}" class="recipe-photo">
     {% endif %}
-    <div class="page-head">
-      <h1>{{ recipe.title }}</h1>
-      <form method="post" action="{{ url_for('recipes.favourite', recipe_id=recipe.id) }}" class="favourite-form">
-        {% if recipe.is_favourite %}
-          <button type="submit" name="favourite" value="0" class="secondary" aria-pressed="true">★ {{ t("recipes.favourite") }}</button>
-        {% else %}
-          <button type="submit" name="favourite" value="1" class="secondary outline" aria-pressed="false">☆ {{ t("recipes.add_favourite") }}</button>
-        {% endif %}
-      </form>
-    </div>
-    <p class="recipe-meta">
-      <span>{{ t("recipes.servings", n=recipe.servings) }}</span>
-      {% if recipe.prep_minutes is not none %}<span>{{ t("recipes.prep", n=recipe.prep_minutes) }}</span>{% endif %}
-      {% if recipe.cook_minutes is not none %}<span>{{ t("recipes.cook", n=recipe.cook_minutes) }}</span>{% endif %}
-      {% if recipe.source_url %}
-        <span>{{ t("recipes.source") }}
-          <a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">{{ recipe.source_url|host or recipe.source_url }} ↗</a></span>
+    <div class="recipe-heading">
+      {% if tags %}
+        <p class="tag-list">
+          {% for item in tags %}
+            <a href="{{ url_for('recipes.index', tag=item.id) }}" class="tag">{{ icon(item.name|tag_icon) }} {{ item.name }}</a>
+          {% endfor %}
+        </p>
       {% endif %}
-    </p>
-    {% if tags %}
-      <p class="tag-list">
-        {% for item in tags %}
-          <a href="{{ url_for('recipes.index', tag=item.id) }}" class="tag">{{ item.name }}</a>
-        {% endfor %}
-      </p>
-    {% endif %}
+      <div class="title-row">
+        <h1>{{ recipe.title }}</h1>
+        <form method="post" action="{{ url_for('recipes.favourite', recipe_id=recipe.id) }}" class="favourite-form">
+          {% if recipe.is_favourite %}
+            <button type="submit" name="favourite" value="0" class="btn-icon is-favourite" aria-pressed="true"
+                    title="{{ t('recipes.favourite') }}" aria-label="{{ t('recipes.favourite') }}">{{ icon("star", "filled") }}</button>
+          {% else %}
+            <button type="submit" name="favourite" value="1" class="btn-icon" aria-pressed="false"
+                    title="{{ t('recipes.add_favourite') }}" aria-label="{{ t('recipes.add_favourite') }}">{{ icon("star") }}</button>
+          {% endif %}
+        </form>
+      </div>
+
+      <ul class="recipe-stats">
+        {% if recipe.prep_minutes is not none %}{{ stat("utensils", t("recipes.stat_prep"), t("recipes.total_time", n=recipe.prep_minutes)) }}{% endif %}
+        {% if recipe.cook_minutes is not none %}{{ stat("pot", t("recipes.stat_cook"), t("recipes.total_time", n=recipe.cook_minutes)) }}{% endif %}
+        {% set total = (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0) %}
+        {% if recipe.prep_minutes is not none and recipe.cook_minutes is not none %}
+          {{ stat("clock", t("recipes.stat_total"), t("recipes.total_time", n=total)) }}
+        {% endif %}
+        {{ stat("users", t("label.servings"), recipe.servings) }}
+      </ul>
+
+      {% if macros.incomplete or macros.total.values()|reject("none")|list %}
+        <section class="recipe-macros" aria-label="{{ t('macros.title') }}">
+          <p class="small-caps">{{ t("macros.per_serving") }}</p>
+          {{ macro_badges(macros.per_serving, macros.incomplete, "macro-badges-large") }}
+          <p class="macro-total">
+            <span class="small-caps">{{ t("macros.total") }}:</span>
+            {% for macro in macro_names %}
+              <span>{{ t("label." ~ macro) }} <strong>{{ macro_value(macro, macros.total[macro]) }}</strong></span>
+            {% endfor %}
+          </p>
+        </section>
+      {% endif %}
+
+      {% if recipe.source_url %}
+        <p class="source-link">{{ t("recipes.source") }}
+          <a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">{{ recipe.source_url|host or recipe.source_url }} {{ icon("external") }}</a></p>
+      {% endif %}
+    </div>
   </header>
 
-  <h2>{{ t("recipes.ingredients") }}</h2>
-  <ul class="ingredient-lines">
-    {% for line in lines %}
-      <li>
-        {% if line.quantity is not none %}<strong>{{ line.quantity|num }} {{ line.unit }}</strong>{% endif %}
-        <a href="{{ url_for('ingredients.edit', ingredient_id=line.ingredient_id) }}">{{ line.name }}</a>
-        {%- if line.note %}, <em>{{ line.note }}</em>{% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-
-  {% if macros.incomplete or macros.total.values()|reject("none")|list %}
-    <h2>{{ t("macros.title") }}</h2>
-    <figure class="table-scroll">
-      <table class="macros-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th class="num">{{ t("macros.per_serving") }}</th>
-            <th class="num">{{ t("macros.total") }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for macro in macro_names %}
-            <tr>
-              <th scope="row">{{ t("label." ~ macro) }}</th>
-              <td class="num">{{ macro_value(macro, macros.per_serving[macro]) }}</td>
-              <td class="num">{{ macro_value(macro, macros.total[macro]) }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </figure>
-    {% if macros.incomplete %}
-      <div class="flash flash-error macros-incomplete">
-        <p>{{ t("macros.incomplete") }}</p>
-        <ul>
-          {% for item in macros.incomplete %}
-            <li>
-              <a href="{{ url_for('ingredients.edit', ingredient_id=item.ingredient_id, next=request.path) }}">{{ item.name }}</a>:
-              {% for missing in item.missing %}{{ t("macros.missing_" ~ missing) }}{% if not loop.last %}, {% endif %}{% endfor %}
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
+  {% if macros.incomplete %}
+    <div class="flash flash-error macros-incomplete">
+      <p>{{ icon("alert") }} {{ t("macros.incomplete") }}</p>
+      <ul>
+        {% for item in macros.incomplete %}
+          <li>
+            <a href="{{ url_for('ingredients.edit', ingredient_id=item.ingredient_id, next=request.path) }}">{{ item.name }}</a>:
+            {% for missing in item.missing %}{{ t("macros.missing_" ~ missing) }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
   {% endif %}
 
-  <h2>{{ t("label.instructions") }}</h2>
-  <div class="prose">{{ recipe.instructions }}</div>
+  <div class="recipe-body">
+    <section class="recipe-ingredients">
+      <h2>{{ icon("carrot") }} {{ t("recipes.ingredients") }}</h2>
+      <ul class="ingredient-lines">
+        {% for line in lines %}
+          <li>
+            <span class="qty">{% if line.quantity is not none %}{{ line.quantity|num }} {{ line.unit }}{% endif %}</span>
+            <span><a href="{{ url_for('ingredients.edit', ingredient_id=line.ingredient_id) }}">{{ line.name }}</a>
+              {%- if line.note %}, <em>{{ line.note }}</em>{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
 
-  {% if recipe.notes %}
-    <h2>{{ t("label.notes") }}</h2>
-    <div class="prose">{{ recipe.notes }}</div>
-  {% endif %}
+    <section class="recipe-steps">
+      <h2>{{ icon("pot") }} {{ t("label.instructions") }}</h2>
+      <ol class="steps">
+        {% for step in recipe.instructions|steps %}<li>{{ step }}</li>{% endfor %}
+      </ol>
+
+      {% if recipe.notes %}
+        <aside class="note-card">
+          <h3>{{ icon("note") }} {{ t("label.notes") }}</h3>
+          <div class="prose">{{ recipe.notes }}</div>
+        </aside>
+      {% endif %}
+    </section>
+  </div>
 
   <footer class="actions">
-    <a href="{{ url_for('recipes.edit', recipe_id=recipe.id) }}" role="button">{{ t("btn.edit") }}</a>
+    <a href="{{ url_for('recipes.edit', recipe_id=recipe.id) }}" role="button" class="btn-small">{{ icon("pencil") }} {{ t("btn.edit") }}</a>
     <form method="post" action="{{ url_for('recipes.delete', recipe_id=recipe.id) }}"
           data-confirm="{{ t('recipes.confirm_delete') }}">
-      <button type="submit" class="secondary">{{ t("btn.delete") }}</button>
+      <button type="submit" class="secondary outline btn-small">{{ icon("trash") }} {{ t("btn.delete") }}</button>
     </form>
   </footer>
 </article>

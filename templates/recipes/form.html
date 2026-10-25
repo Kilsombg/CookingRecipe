@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import invalid, error_text, form_errors_notice %}
+{% from "macros.html" import invalid, error_text, form_errors_notice, icon %}
 
 {% set heading = t("recipes.edit_title") if recipe else t("recipes.new") %}
 {% block title %}{{ heading }} · CookingRecipe{% endblock %}
@@ -19,7 +19,7 @@
     <input name="ing_note" value="{{ row.note }}"
            aria-label="{{ t('label.note') }}" placeholder="{{ t('label.note') }}">
     <button type="button" class="secondary outline" data-remove-row
-            aria-label="{{ t('recipes.remove_ingredient') }}" title="{{ t('recipes.remove_ingredient') }}">×</button>
+            aria-label="{{ t('recipes.remove_ingredient') }}" title="{{ t('recipes.remove_ingredient') }}">{{ icon("x") }}</button>
     {% if error %}<small class="row-error">{{ t(error) }}</small>{% endif %}
   </div>
 {% endmacro %}
@@ -59,7 +59,7 @@
   </div>
 
   <label>
-    {{ t("label.source_url") }}
+    {{ icon("external") }} {{ t("label.source_url") }}
     <input name="source_url" value="{{ form.source_url }}" type="text" inputmode="url"
            placeholder="https://…" {{ invalid(errors.source_url) }}>
     {{ error_text(errors.source_url) }}
@@ -67,19 +67,19 @@
 
   <div class="grid">
     <label>
-      {{ t("label.servings") }}
+      {{ icon("users") }} {{ t("label.servings") }}
       <input name="servings" value="{{ form.servings }}" type="number" min="1" step="1" required
              {{ invalid(errors.servings) }}>
       {{ error_text(errors.servings) }}
     </label>
     <label>
-      {{ t("label.prep_minutes") }}
+      {{ icon("utensils") }} {{ t("label.prep_minutes") }}
       <input name="prep_minutes" value="{{ form.prep_minutes }}" type="number" min="0" step="1"
              {{ invalid(errors.prep_minutes) }}>
       {{ error_text(errors.prep_minutes) }}
     </label>
     <label>
-      {{ t("label.cook_minutes") }}
+      {{ icon("pot") }} {{ t("label.cook_minutes") }}
       <input name="cook_minutes" value="{{ form.cook_minutes }}" type="number" min="0" step="1"
              {{ invalid(errors.cook_minutes) }}>
       {{ error_text(errors.cook_minutes) }}
@@ -87,7 +87,7 @@
   </div>
 
   <fieldset>
-    <legend>{{ t("recipes.ingredients") }}</legend>
+    <legend>{{ icon("carrot") }} {{ t("recipes.ingredients") }}</legend>
     <p><small>{{ t("recipes.ingredients_help") }}</small></p>
     <div id="ingredient-rows">
       {% for row in rows %}
@@ -96,31 +96,31 @@
     </div>
     {% if errors.ingredients %}<p class="flash flash-error">{{ t(errors.ingredients) }}</p>{% endif %}
     <button type="button" class="secondary outline" data-add-row="ingredient-rows"
-            data-template="ingredient-row-template">+ {{ t("recipes.add_ingredient") }}</button>
+            data-template="ingredient-row-template">{{ icon("plus") }} {{ t("recipes.add_ingredient") }}</button>
   </fieldset>
 
   <label>
-    {{ t("label.instructions") }}
+    {{ icon("pot") }} {{ t("label.instructions") }}
     <textarea name="instructions" rows="10" required {{ invalid(errors.instructions) }}>{{ form.instructions }}</textarea>
     {% if errors.instructions %}{{ error_text(errors.instructions) }}
     {% else %}<small>{{ t("recipes.instructions_help") }}</small>{% endif %}
   </label>
 
   <label>
-    {{ t("label.tags") }}
+    {{ icon("tag") }} {{ t("label.tags") }}
     <input name="tags" value="{{ form.tags }}" autocomplete="off">
     <small>{{ t("recipes.tags_help") }}</small>
   </label>
 
   <label>
-    {{ t("label.notes") }}
+    {{ icon("note") }} {{ t("label.notes") }}
     <textarea name="notes" rows="3">{{ form.notes }}</textarea>
   </label>
 
   <div class="actions">
-    <button type="submit">{{ t("btn.save") }}</button>
+    <button type="submit">{{ icon("check") }} {{ t("btn.save") }}</button>
     <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) if recipe else url_for('recipes.index') }}"
-       role="button" class="secondary outline">{{ t("btn.cancel") }}</a>
+       role="button" class="secondary outline">{{ icon("x") }} {{ t("btn.cancel") }}</a>
   </div>
 </form>
 

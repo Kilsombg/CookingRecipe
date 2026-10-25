@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% from "macros.html" import icon %}
 
 {% block title %}{{ t("data.title") }} · CookingRecipe{% endblock %}
 
 {% block content %}
 <h1>{{ t("data.title") }}</h1>
 
-<h2>{{ t("data.export") }}</h2>
+<h2>{{ icon("download") }} {{ t("data.export") }}</h2>
 <p>{{ t("data.export_help") }}</p>
-<p><a href="{{ url_for('data.export') }}" role="button" download>{{ t("data.export_button") }}</a></p>
+<p><a href="{{ url_for('data.export') }}" role="button" download>{{ icon("download") }} {{ t("data.export_button") }}</a></p>
 
-<h2>{{ t("data.import") }}</h2>
+<h2>{{ icon("upload") }} {{ t("data.import") }}</h2>
 <p>{{ t("data.import_help") }}</p>
 {% if error %}<p class="flash flash-error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('data.import_file') }}" enctype="multipart/form-data"
@@ -18,7 +19,7 @@
     {{ t("data.file") }}
     <span class="inline-form">
       <input type="file" name="file" accept=".json,application/json" required>
-      <button type="submit">{{ t("data.import_button") }}</button>
+      <button type="submit">{{ icon("upload") }} {{ t("data.import_button") }}</button>
     </span>
   </label>
 </form>
