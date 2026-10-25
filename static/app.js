@@ -72,6 +72,13 @@ document.addEventListener("submit", async (event) => {
   button.setAttribute("aria-label", label);
 });
 
+// <select data-auto-submit> submits its form as soon as another option is chosen (items per page).
+document.addEventListener("change", (event) => {
+  if (event.target.dataset.autoSubmit !== undefined) {
+    event.target.form.requestSubmit();
+  }
+});
+
 // <input type="checkbox" data-toggle-url="..."> saves its tick without reloading the page.
 // If saving fails, the tick is undone and the message from the nearest [data-toggle-error] is shown.
 document.addEventListener("change", async (event) => {

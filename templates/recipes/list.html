@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import icon, macro_badges %}
+{% from "macros.html" import icon, macro_badges, pagination %}
 
 {% block title %}{{ t("recipes.title") }} · CookingRecipe{% endblock %}
 
@@ -86,6 +86,7 @@
       </article>
     {% endfor %}
   </div>
+  {{ pagination(page) }}
 {% elif q or tag or favourites %}
   <p class="empty-note">{{ t("recipes.no_results") }}</p>
 {% else %}

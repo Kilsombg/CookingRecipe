@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import icon, MACRO_ICONS %}
+{% from "macros.html" import icon, pagination, MACRO_ICONS %}
 
 {% block title %}{{ t("ingredients.title") }} · CookingRecipe{% endblock %}
 
@@ -53,6 +53,7 @@
       </tbody>
     </table>
   </figure>
+  {{ pagination(page) }}
   <p><small>{{ t("ingredients.per_100g_note") }}</small></p>
 {% elif q %}
   <p>{{ t("ingredients.no_results", q=q) }}</p>

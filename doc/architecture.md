@@ -62,11 +62,12 @@ CookingRecipe/
 │   ├── photos.py          # photo check/resize with Pillow, saving and deleting the files
 │   ├── macros.py          # grams conversion, recipe and menu macro totals
 │   ├── shopping_list.py   # merging and scaling ingredients
+│   ├── pagination.py      # ?page= / ?per_page= on the recipe and ingredient lists, which page links to show
 │   └── backup.py          # JSON export file format, checking an uploaded file
 ├── templates/
 │   ├── base.html          # layout, navigation, flash messages, <meta charset="utf-8">
 │   ├── error.html         # simple error page (upload over the size limit)
-│   ├── macros.html        # form error helpers, icon(), macro badges
+│   ├── macros.html        # form error helpers, icon(), macro badges, pagination
 │   ├── recipes/           # list.html, detail.html, form.html
 │   ├── ingredients/       # list.html, form.html
 │   ├── units/             # list.html
@@ -221,6 +222,7 @@ python app.py
   - `backup.py`: every kind of bad value in an import file is rejected with its place in the file
   - `text.py`: Cyrillic case folding (`"  Пилешко   ФИЛЕ " → "пилешко филе"`)
   - `photos.py`: accepted formats, resizing, EXIF rotation, transparency, size limit
+  - `pagination.py`: page slices, bad or unknown `?page=` / `?per_page=`, which page links and ellipses show
 - `translations.py`: English and Bulgarian have the same set of keys. `i18n.py`: fallback to English, unknown cookie value, placeholders.
 - `db.py` tests use a temporary SQLite file. They check that all migrations apply cleanly to an empty database, and that Bulgarian text is saved and loaded correctly.
 - `tests/test_routes.py` drives the main flows through Flask's test client (create/edit/delete, validation errors, blocked ingredient delete). Layout and JavaScript are checked by hand in the browser.

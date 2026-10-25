@@ -125,6 +125,25 @@ def test_more_pages_render(client, lang):
         assert client.get(url).status_code == 200, url
 
 
+def test_lists_are_paged(app, client):
+    for i in range(1, 13):
+        client.post("/ingredients", data={"name": f"Item {i:02}"})
+    page = client.get("/ingredients?per_page=10&page=2&q=item").get_data(as_text=True)
+    assert "11–12 of 12" in page
+    assert ">Item 11</a>" in page and ">Item 10</a>" not in page
+    assert 'href="/ingredients?per_page=10&amp;q=item"' in page  # page 1, filters kept
+    assert '<input type="hidden" name="q" value="item">' in page
+
+    page = client.get("/ingredients").get_data(as_text=True)
+    assert "1–12 of 12" in page
+    assert '<option value="50" selected>' in page
+
+    client.post("/recipes", data=recipe_form())
+    page = client.get("/recipes").get_data(as_text=True)
+    assert "1–1 of 1" in page
+    assert '<option value="20" selected>' in page
+
+
 def test_ingredient_macros_are_saved_and_listed(app, client):
     client.set_cookie("lang", "bg")
     assert client.post("/ingredients", data=ingredient_form()).status_code == 302

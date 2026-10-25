@@ -39,6 +39,55 @@
   {% endif %}
 {% endmacro %}
 
+{# Under a paged list (services/pagination.py): "21–40 of 95" on the left, how many per page in the middle,
+   the page links on the right. app.js reloads the page when another number per page is chosen. #}
+{% macro pagination(page) %}
+  <nav class="pagination" aria-label="{{ t('pagination.label') }}">
+    <p class="pagination-range">{{ t("pagination.range", start=page.start, end=page.end, total=page.total) }}</p>
+
+    <form method="get" class="pagination-size">
+      {% for name, value in page.kept_args %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {% endfor %}
+      <label>{{ t("pagination.per_page") }}
+        <select name="per_page" data-auto-submit>
+          {% for n in page.per_page_options %}
+            <option value="{{ n }}" {% if n == page.per_page %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <noscript><button type="submit" class="btn-small">{{ t("pagination.show") }}</button></noscript>
+    </form>
+
+    <ul class="pagination-pages">
+      <li>
+        {% if page.has_prev %}
+          <a href="{{ page.url(page.number - 1) }}" rel="prev" title="{{ t('pagination.prev') }}"
+             aria-label="{{ t('pagination.prev') }}">{{ icon("chevron-left") }}</a>
+        {% else %}
+          <span aria-disabled="true" title="{{ t('pagination.prev') }}">{{ icon("chevron-left") }}</span>
+        {% endif %}
+      </li>
+      {% for n in page.links() %}
+        <li>
+          {% if n is none %}<span class="pagination-gap">…</span>
+          {% elif n == page.number %}<a href="{{ page.url(n) }}" aria-current="page"
+                                       aria-label="{{ t('pagination.page', n=n) }}">{{ n }}</a>
+          {% else %}<a href="{{ page.url(n) }}" aria-label="{{ t('pagination.page', n=n) }}">{{ n }}</a>{% endif %}
+        </li>
+      {% endfor %}
+      <li>
+        {% if page.has_next %}
+          <a href="{{ page.url(page.number + 1) }}" rel="next" title="{{ t('pagination.next') }}"
+             aria-label="{{ t('pagination.next') }}">{{ icon("chevron-right") }}</a>
+        {% else %}
+          <span aria-disabled="true" title="{{ t('pagination.next') }}">{{ icon("chevron-right") }}</span>
+        {% endif %}
+      </li>
+    </ul>
+  </nav>
+{% endmacro %}
+
 {% macro form_errors_notice(errors) %}
   {% if errors %}<p class="flash flash-error" role="alert">{{ t("msg.fix_errors") }}</p>{% endif %}
 {% endmacro %}

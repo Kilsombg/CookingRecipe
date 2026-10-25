@@ -1,12 +1,15 @@
-"""Ingredient catalogue: list, add, edit (macros per 100 g, grams per piece), delete."""
+"""Ingredient catalogue: paged list, add, edit (macros per 100 g, grams per piece), delete."""
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 import db
 from i18n import num, safe_next, t
 from services.forms import INGREDIENT_FIELDS, INGREDIENT_VALUE_FIELDS, parse_ingredient
+from services.pagination import paginate
 
 bp = Blueprint("ingredients", __name__, url_prefix="/ingredients")
+
+PER_PAGE_DEFAULT, PER_PAGE_OPTIONS = 50, (10, 20, 50, 100)  # table rows per page on the list
 
 
 def _load(ingredient_id):
@@ -49,8 +52,8 @@ def _render_form(ingredient, errors, status=200):
 def index():
     q = request.args.get("q", "").strip()
     missing = request.args.get("missing") == "1"
-    return render_template("ingredients/list.html", q=q, missing=missing,
-                           ingredients=db.list_ingredients(db.get_db(), q, missing))
+    page = paginate(db.list_ingredients(db.get_db(), q, missing), PER_PAGE_DEFAULT, PER_PAGE_OPTIONS)
+    return render_template("ingredients/list.html", q=q, missing=missing, ingredients=page.items, page=page)
 
 
 @bp.get("/new")

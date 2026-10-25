@@ -1,7 +1,7 @@
 """UI texts in every supported language.
 
 Both dictionaries must have exactly the same keys (checked by a test).
-Keys are grouped by prefix: nav., btn., label., msg., error., day., meal., and one prefix per page.
+Keys are grouped by prefix: nav., btn., label., msg., error., pagination., day., meal., and one prefix per page.
 """
 
 TEXTS = {
@@ -41,6 +41,14 @@ TEXTS = {
         "label.grams_per_piece": "Grams per piece",
 
         "msg.fix_errors": "Please fix the errors below.",
+
+        "pagination.label": "Pages",
+        "pagination.range": "{start}–{end} of {total}",
+        "pagination.per_page": "Per page",
+        "pagination.show": "Show",
+        "pagination.prev": "Previous page",
+        "pagination.next": "Next page",
+        "pagination.page": "Page {n}",
 
         "error.required": "This field is required.",
         "error.number": "Enter a number, e.g. 200 or 0.5.",
@@ -274,6 +282,14 @@ TEXTS = {
         "label.grams_per_piece": "Грамове за брой",
 
         "msg.fix_errors": "Моля, поправете грешките по-долу.",
+
+        "pagination.label": "Страници",
+        "pagination.range": "{start}–{end} от {total}",
+        "pagination.per_page": "На страница",
+        "pagination.show": "Покажи",
+        "pagination.prev": "Предишна страница",
+        "pagination.next": "Следваща страница",
+        "pagination.page": "Страница {n}",
 
         "error.required": "Полето е задължително.",
         "error.number": "Въведете число, напр. 200 или 0,5.",

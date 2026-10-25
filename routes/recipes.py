@@ -1,4 +1,4 @@
-"""Recipes: card list with search, tag and favourites filter, detail, create/edit/delete, favourite, photo upload."""
+"""Recipes: paged card list with search, tag and favourites filter, detail, create/edit/delete, favourite, photo upload."""
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
@@ -7,10 +7,12 @@ from i18n import num, safe_next, t
 from services import photos
 from services.forms import RECIPE_FIELDS, ROW_FIELDS, parse_recipe
 from services.macros import recipe_macros
+from services.pagination import paginate
 
 bp = Blueprint("recipes", __name__, url_prefix="/recipes")
 
 NEW_FORM_ROWS = 3  # blank ingredient rows on a new recipe; "Add ingredient" adds more
+PER_PAGE_DEFAULT, PER_PAGE_OPTIONS = 20, (10, 20, 50)  # recipe cards per page on the list
 
 
 def _load(recipe_id):
@@ -98,10 +100,11 @@ def index():
     tags = db.list_tags(conn)
     tag = next((tag for tag in tags if str(tag["id"]) == request.args.get("tag")), None)
     favourites = request.args.get("fav") == "1"
-    recipes = db.list_recipes(conn, q, tag["id"] if tag else None, favourites)
+    page = paginate(db.list_recipes(conn, q, tag["id"] if tag else None, favourites),
+                    PER_PAGE_DEFAULT, PER_PAGE_OPTIONS)
     lines = db.lines_by_recipe(conn)
-    macros = {r["id"]: recipe_macros(lines.get(r["id"], []), r["servings"]) for r in recipes}
-    return render_template("recipes/list.html", recipes=recipes, macros=macros, q=q, tags=tags,
+    macros = {r["id"]: recipe_macros(lines.get(r["id"], []), r["servings"]) for r in page.items}
+    return render_template("recipes/list.html", recipes=page.items, page=page, macros=macros, q=q, tags=tags,
                            tag=tag, favourites=favourites, has_favourites=db.has_favourites(conn),
                            recipe_tags=db.tags_by_recipe(conn))
 
